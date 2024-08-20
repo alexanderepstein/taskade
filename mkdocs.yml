@@ -1,0 +1,94 @@
+site_name: Tanto
+site_url: 
+site_dir: docs
+site_description: A simple and beautiful theme for MkDocs.
+site_author: Alexander Epstein
+repo_name: tanto
+repo_url: https://github.com/alexanderepstein/tanto
+
+nav: 
+  - Home: 
+    - Introduction: index.md
+    - Quick Start: quick_start.md
+    - Changelog: changelog.md
+    - License: license.md
+  - Usage:
+    - Basic Usage: usage/basic_usage.md
+    - Advanced Usage: usage/advanced_usage.md
+  - Development: 
+      - development/index.md
+      - Environment: development/environment.md
+      - Coverage Report: development/coverage_report.md
+  - Code Reference: reference/
+  
+
+theme:
+  name: material
+  logo: assets/logo.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: red
+      toggle:
+        icon: material/weather-night
+        title: Switch to Dark Mode
+
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: red
+      toggle:
+        icon: material/weather-sunny
+        title: Switch to Light Mode
+  
+  features:
+    - content.tabs.link
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.tabs.scrollspy
+    - nagivation.path
+    - navigation.prev_next
+    - navigation.prev_next.sticky
+    - navigation.tracking
+
+plugins:
+  - autorefs
+  - search
+  - gen-files:
+      scripts: 
+        - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - git-revision-date-localized:
+      format: "%Y-%m-%d %H:%M:%S"
+  - mkdocstrings:
+      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          import:
+            - url: https://docs.python.org/objects.inv
+              domains: [std, py]
+          options:
+            docstring_style: sphinx
+            show_source: true
+            show_type_annotations: true
+  - coverage:
+      page_name: coverage_report
+      html_report_dir: development
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji
+  - pymdownx.magiclink
+  - pymdownx.highlight:
+      use_pygments: true
+      pygments_lang_class: true
+
+      
