@@ -1,6 +1,6 @@
 [project]
-name = "tanto"
-version = "0.0.1"
+name = "syncra"
+dynamic = ["version"]
 description = "A DAG framework written in std python"
 authors = [
     {name = "Alex Epstein", email = "alexanderepstein@tuta.io"},
@@ -22,11 +22,16 @@ docs = [
     "mkdocstrings-python>=1.10.8",
     "mkdocs-coverage>=1.1.0",
     "mkdocs-git-revision-date-localized-plugin>=1.2.6",
+    "mkdocs-git-authors-plugin>=0.9.0",
 ]
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
+
+[tool.pdm.version]
+source = "file"
+path = "syncra/__init__.py"
 
 [tool.ruff]
 
@@ -123,7 +128,7 @@ dev = [
 pre-commit = "pre-commit run --all-files"
 serve-document = "mkdocs serve"
 document = "mkdocs build -d public/documentation"
-test = "pytest -n auto --cov-report term --cov-report xml:coverage.xml --cov=tanto"
+test = "pytest -n auto --cov-report term --cov-report xml:coverage.xml  --cov-report html:docs/development/coverage --cov=syncra"
 format = {composite = ["ruff check . --fix", "ruff format", "isort ."]}
 release = {composite = ["pre-commit", "test", "document"]}
 
@@ -132,4 +137,4 @@ profile = "black"
 line_length = 120
 
 [tool.coverage.html]
-directory = "public/coverage"
+directory = "docs/development/coverage"

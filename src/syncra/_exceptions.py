@@ -4,13 +4,13 @@ _T = TypeVar("_T")
 """Type variable for the return type of a task"""
 
 
-class TantoError(Exception):
-    """Base class for Tanto exceptions."""
+class SyncraError(Exception):
+    """Base class for Syncra exceptions."""
 
     pass
 
 
-class FailedDependencyError(TantoError):
+class FailedDependencyError(SyncraError):
     """Error for when all available tasks have at least one failed dependency."""
 
     def __init__(self: Self, message: str, partial_results: Dict[str, _T]):

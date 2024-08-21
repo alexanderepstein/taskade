@@ -8,30 +8,71 @@ from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from functools import wraps
 from graphlib import TopologicalSorter
-from typing import Awaitable, Callable, Dict, Optional, Protocol, Self, Set, Tuple, Type, TypeVar, Union, cast
+from typing import (Awaitable, Callable, Dict, List, Optional, Protocol, Self,
+                    Set, Tuple, Type, TypeVar, Union, cast)
 
-from tanto._exceptions import FailedDependencyError
+from syncra._exceptions import FailedDependencyError
 
 _T = TypeVar("_T")
 """Type variable for the return type of a task"""
 
+PoolExecutor = TypeVar(
+    "PoolExecutor",
+    bound=Union[
+        Union[Union[ThreadPoolExecutor, ProcessPoolExecutor], Type[ThreadPoolExecutor]], Type[ProcessPoolExecutor]
+    ],
+)
+"""Type variable for the pool type passed to concurrent execution"""
 
-def pass_through(*args: Tuple[_T, ...]) -> Tuple[_T, ...]:
+
+def _get_args_from_dependencies(
+    dependencies: Tuple[Task, ...], results: Dict[Task, _T]
+) -> Tuple[List[_T], Dict[str, _T]]:
+    args = []
+    kwargs = {}
+    for dependency in dependencies:
+        if dependency.output_names:
+            if isinstance(results[dependency], tuple):
+                for name, result in zip(dependency.output_names, results[dependency]):
+                    kwargs[name] = result
+            else:
+                kwargs[dependency.output_names[0]] = results[dependency]
+        else:
+            if isinstance(results[dependency], tuple):
+                args.extend(results[dependency])
+            else:
+                args.append(results[dependency])
+    return args, kwargs
+
+
+def _execute_pre_call(pre_call: Optional[PreCallProtocol], *args, **kwargs) -> Dict[str, _T]:
     """
-    A pass through function
+    Executes the pre_call function and optionally updates the kwargs
 
-    :return: the arguments provided to the graph
+    :param pre_call: optional pre_call function, defaults to None
+    :return: the kwargs to use for the invocation of the task
     """
-    return args
+    if pre_call:
+        pre_call_kwargs = pre_call(*args, **kwargs)
+        if pre_call_kwargs:
+            kwargs.update(pre_call_kwargs)
+    return kwargs
 
 
-def eat(*args: Tuple[_T, ...]) -> Tuple:
+def _execute_post_call(post_call: Optional[PostCallProtocol], task: Task, result: _T, results: Dict[str, _T]) -> None:
     """
-    Eats the arguments of its invocation
+    Executs the post_call function
 
-    :return: an empty tuple
+    :param post_call: optional pre_call function, defaults to None
+    :param task: the completed task
+    :param result: result of the completed task
+    :param results: results of execution up until this point
     """
-    return ()
+    if post_call:
+        post_call(
+            result,
+            *(results[dependent_task] for dependent_task in task.dependencies),
+        )
 
 
 def _get_eligble_tasks(available_tasks: Tuple[Task, ...], results: Dict[Task, _T]) -> Tuple[Task, ...]:
@@ -129,13 +170,11 @@ class Graph(TopologicalSorter):
 
     def __call__(
         self: Self,
-        pre_call: PreCallProtocol = pass_through,
+        pre_call: Optional[PreCallProtocol] = None,
         post_call: Optional[PostCallProtocol] = None,
         raise_immediately: bool = True,
         tasks_semaphore: Optional[asyncio.Semaphore] = None,
-        concurrency_pool: Union[
-            Union[Union[ThreadPoolExecutor, ProcessPoolExecutor], Type[ThreadPoolExecutor]], Type[ProcessPoolExecutor]
-        ] = ThreadPoolExecutor,
+        concurrency_pool: PoolExecutor = ThreadPoolExecutor,
         n_jobs: Optional[int] = None,
     ) -> Union[Dict[str, _T], Awaitable[Dict[str, _T]]]:
         """
@@ -160,13 +199,13 @@ class Graph(TopologicalSorter):
 class PreCallProtocol(Protocol):
     """Protocol for the pre_call function"""
 
-    def __call__(self, *args: Tuple[_T, ...]) -> Tuple[_T, ...]: ...
+    def __call__(self, *args: Tuple[_T, ...], **kwargs: Dict[str, _T]) -> Optional[Dict[str, _T]]: ...
 
 
 class PostCallProtocol(Protocol):
     """Protocol for the post_call function"""
 
-    def __call__(self, *args: Tuple[_T, ...]) -> None: ...
+    def __call__(self, result: _T, *args: Tuple[_T, ...]) -> None: ...
 
 
 class GraphResults(UserDict):
@@ -195,26 +234,17 @@ class Task:
     dependencies: Union[Tuple[Task, ...], Task] = ()
     """The dependencies of the task"""
 
-    input_names: Tuple[str, ...] = ()
-    pre_call: Optional[
-        Callable[
-            [
-                _T,
-            ],
-            Tuple[_T, ...],
-        ]
-    ] = field(default=None, kw_only=True)
-    """The function to call with the results of the dependencies for this task, the return value of this function will be the input to this task execuion"""
+    output_names: Tuple[str, ...] = ()
+    """The names of the outputs of the task, this must match the number of outputs from the task"""
 
-    post_call: Optional[
-        Callable[
-            [
-                _T,
-            ],
-            None,
-        ]
-    ] = field(default=None, kw_only=True)
-    """The function to call with the output of this task, the result of this function will be the stored result for this task"""
+    pre_call: Optional[PreCallProtocol] = field(default=None, kw_only=True)
+    """The function to call with the results of the dependencies for this task"""
+
+    post_call: Optional[PostCallProtocol] = field(default=None, kw_only=True)
+    """The function to call with the output of this task"""
+
+    init_kwargs: Optional[Dict[str, _T]] = field(default=None, kw_only=True)
+    """The optional initialization arguments for the task"""
 
     name: Optional[str] = field(default=None, kw_only=True)
     """The optional name for this task"""
@@ -290,7 +320,7 @@ class Task:
         """
         The underlying graph for the task
 
-        :return: the grah for the task, this will be None if this task is not part of a graph
+        :return: the graph for the task, this will be None if this task is not part of a graph
         """
         return self._graph if self._graph is None or isinstance(self._graph, Graph) else self._graph()
 
@@ -331,13 +361,8 @@ class Task:
 
 def _concurrent_execute_graph(
     graph: Graph,
-    pre_call: Callable[
-        [
-            _T,
-        ],
-        Tuple[_T],
-    ] = pass_through,
-    post_call: Optional[Callable[[_T], None]] = None,
+    pre_call: Optional[PreCallProtocol] = None,
+    post_call: Optional[PostCallProtocol] = None,
     raise_immediately: bool = True,
     concurrency_pool: Union[ThreadPoolExecutor, ProcessPoolExecutor] = None,
 ) -> Dict[str, _T]:
@@ -345,7 +370,7 @@ def _concurrent_execute_graph(
     Concurrently execute the graph
 
     :param graph: graph to execute
-    :param pre_call: default pre_call function to use for execution, task level pre_call functions take precedence over this, defaults to pass_through
+    :param pre_call: default pre_call function to use for execution, task level pre_call functions take precedence over this, defaults to None
     :param post_call: default post_call function to use for execution, task level post_call functions take precendence over this, defaults to None
     :param raise_immediately: indicates if any exception raised by a node in the graph should be raised immediately,
     if False the graph will continue to execute as long as there are nodes that are not dependent on a failed task, defaults to True
@@ -362,13 +387,11 @@ def _concurrent_execute_graph(
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
         for available_task in eligible_tasks:
             available_task = cast(Task, available_task)
-            call_args = getattr(available_task, pre_call.__name__, pre_call)(
-                *(results[dependent_task] for dependent_task in available_task.dependencies)
-            )
-            if len(available_task.input_names):
-                call_args = {name: arg for name, arg in zip(available_task.input_names, call_args)}
+            call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
+            task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
+            call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
             # TODO: Look for a way around submit as we lose the chunksize behavior offered by pool.map
-            task_future = concurrency_pool.submit(available_task.func, *call_args)
+            task_future = concurrency_pool.submit(available_task.func, *call_args, **call_kwargs)
             task_futures.add(task_future)
             task_future_map[task_future] = available_task
 
@@ -386,11 +409,7 @@ def _concurrent_execute_graph(
         else:
             result = task_future.result()
         task_futures.remove(task_future)
-        if post_call:
-            post_call(
-                result,
-                *(result[dependent_task] for dependent_task in task.dependencies),
-            )
+        _execute_post_call(post_call, task, result, results)
         graph.done(task)
         results[task] = result
     return GraphResults({hash(task): result for task, result in results.items()})
@@ -398,13 +417,8 @@ def _concurrent_execute_graph(
 
 def _sync_execute_graph(
     graph: Graph,
-    pre_call: Callable[
-        [
-            _T,
-        ],
-        Tuple[_T],
-    ] = pass_through,
-    post_call: Optional[Callable[[_T], None]] = None,
+    pre_call: PreCallProtocol = None,
+    post_call: PostCallProtocol = None,
     raise_immediately: bool = True,
 ) -> Dict[str, _T]:
     """
@@ -426,22 +440,16 @@ def _sync_execute_graph(
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
         for available_task in eligible_tasks:
             available_task = cast(Task, available_task)
-            call_args = getattr(available_task, pre_call.__name__, pre_call)(
-                *(results[dependent_task] for dependent_task in available_task.dependencies)
-            )
-            if len(available_task.input_names):
-                call_args = {name: arg for name, arg in zip(available_task.input_names, call_args)}
+            call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
+            task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
+            call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
             try:
-                result = available_task.func(*call_args)
+                result = available_task.func(*call_args, **call_kwargs)
             except Exception as e:
                 result = e
                 if raise_immediately:
                     raise result
-            if post_call:
-                post_call(
-                    result,
-                    *(result[dependent_task] for dependent_task in available_task.dependencies),
-                )
+            _execute_post_call(post_call, available_task, result, results)
             graph.done(available_task)
             results[available_task] = result
     return GraphResults({hash(task): result for task, result in results.items()})
@@ -449,17 +457,10 @@ def _sync_execute_graph(
 
 def execute_graph(
     graph: Graph,
-    pre_call: Callable[
-        [
-            _T,
-        ],
-        Tuple[_T],
-    ] = pass_through,
-    post_call: Optional[Callable[[_T], None]] = None,
+    pre_call: PreCallProtocol = None,
+    post_call: PostCallProtocol = None,
     raise_immediately: bool = True,
-    concurrency_pool: Union[
-        Union[Union[ThreadPoolExecutor, ProcessPoolExecutor], Type[ThreadPoolExecutor]], Type[ProcessPoolExecutor]
-    ] = ThreadPoolExecutor,
+    concurrency_pool: PoolExecutor = ThreadPoolExecutor,
     n_jobs: Optional[int] = None,
 ) -> Dict[str, _T]:
     """
@@ -534,13 +535,8 @@ async def _aconsumer(result_queue: asyncio.Queue, raise_immediately: bool) -> Tu
 
 async def aexecute_graph(
     graph: Graph,
-    pre_call: Callable[
-        [
-            _T,
-        ],
-        Tuple[_T],
-    ] = pass_through,
-    post_call: Optional[Callable[[_T], None]] = None,
+    pre_call: PreCallProtocol = None,
+    post_call: PostCallProtocol = None,
     raise_immediately: bool = True,
     tasks_semaphore: Optional[asyncio.Semaphore] = None,
 ) -> Dict[str, _T]:
@@ -573,20 +569,15 @@ async def aexecute_graph(
                 executing_func = async_wrapper
             else:
                 executing_func = available_task.func
-
-            call_args = getattr(available_task, pre_call.__name__, pre_call)(
-                *(results[dependent_task] for dependent_task in available_task.dependencies)
-            )
-            if len(available_task.input_names):
-                call_args = {name: arg for name, arg in zip(available_task.input_names, call_args)}
+            call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
+            task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
+            call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
             # TODO: Look into using asyncio.wait instead of the queue, assumption is possible speed improvement?
-            asyncio.create_task(_aproducer(available_task, executing_func(*call_args), result_queue, tasks_semaphore))
-        task, result = await _aconsumer(result_queue, raise_immediately)
-        if post_call:
-            post_call(
-                result,
-                *(result[dependent_task] for dependent_task in task.dependencies),
+            asyncio.create_task(
+                _aproducer(available_task, executing_func(*call_args, **call_kwargs), result_queue, tasks_semaphore)
             )
+        task, result = await _aconsumer(result_queue, raise_immediately)
+        _execute_post_call(post_call, task, result, results)
         graph.done(task)
         results[task] = result
     return GraphResults({hash(task): result for task, result in results.items()})
