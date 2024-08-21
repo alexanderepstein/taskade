@@ -51,6 +51,11 @@ def task_d(*args, **kwargs):
     return "Task D completed"
 
 
+@task(graph_name="init_kwargs_graph", init_kwargs={"value": "init"})
+async def task_e(value):
+    return value
+
+
 @pytest.mark.asyncio
 async def test_graph_execution():
     """
@@ -67,6 +72,19 @@ async def test_graph_execution():
         "Task C completed",
         "Task D completed",
     )
+
+
+@pytest.mark.asyncio
+async def test_init_kwargs_graph_execution():
+    """
+    Test the execution of a graph.
+    """
+    # Retrieve the graph by name
+    graph = get_graph("init_kwargs_graph")
+
+    # Execute the graph if it exists
+    results = await graph()
+    assert tuple(results.values()) == ("init",)
 
 
 @pytest.mark.asyncio
