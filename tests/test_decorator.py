@@ -3,7 +3,7 @@ from time import sleep
 
 import pytest
 
-from tanto import get_graph, task
+from syncra import get_graph, task
 
 
 @task(graph_name="my_graph2", name="task_a_1")
