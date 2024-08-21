@@ -390,6 +390,8 @@ def _concurrent_execute_graph(
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
             call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
+            if available_task.init_kwargs:
+                call_kwargs.update(available_task.init_kwargs)
             # TODO: Look for a way around submit as we lose the chunksize behavior offered by pool.map
             task_future = concurrency_pool.submit(available_task.func, *call_args, **call_kwargs)
             task_futures.add(task_future)
@@ -443,6 +445,8 @@ def _sync_execute_graph(
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
             call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
+            if available_task.init_kwargs:
+                call_kwargs.update(available_task.init_kwargs)
             try:
                 result = available_task.func(*call_args, **call_kwargs)
             except Exception as e:
@@ -572,6 +576,8 @@ async def aexecute_graph(
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
             call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
+            if available_task.init_kwargs:
+                call_kwargs.update(available_task.init_kwargs)
             # TODO: Look into using asyncio.wait instead of the queue, assumption is possible speed improvement?
             asyncio.create_task(
                 _aproducer(available_task, executing_func(*call_args, **call_kwargs), result_queue, tasks_semaphore)
