@@ -1,6 +1,6 @@
 from typing import Awaitable, Callable, Dict, Optional, Tuple, TypeVar, Union
 
-from tanto._execution import Graph, Task
+from syncra._execution import Graph, Task
 
 _T = TypeVar("_T")
 """Type variable for the return type of a task"""
@@ -67,15 +67,8 @@ def task(
     graph_name: str,
     *,
     dependencies: Union[Union[Tuple[str, ...], str], Union[Task, Tuple[Task, ...]]] = (),
-    input_names: Tuple[str, ...] = (),
-    pre_call: Optional[
-        Callable[
-            [
-                _T,
-            ],
-            Tuple[_T, ...],
-        ]
-    ] = None,
+    output_names: Tuple[str, ...] = (),
+    pre_call: Optional[Callable[[_T], None]] = None,
     post_call: Optional[Callable[[_T], None]] = None,
     name: Optional[str] = None,
 ) -> Callable[[Callable[..., Union[_T, Awaitable[_T]]]], Callable[..., Union[_T, Awaitable[_T]]]]:
@@ -84,7 +77,7 @@ def task(
 
     :param graph_name: The name of the graph to associate the task with
     :param dependencies: A tuple of Task objects or names of tasks within the same graph that this task depends on
-    :param input_names: A tuple of input names for the task
+    :param output_names: A tuple of output names for the task
     :param pre_call: An optional function to be called before the task execution
     :param post_call: An optional function to be called after the task execution
     :param name: An optional name for the task
@@ -114,7 +107,7 @@ def task(
             func=func,
             dependencies=__map_dependencies(graph_name, name, dependencies),
             _graph=graph,
-            input_names=input_names,
+            output_names=output_names,
             pre_call=pre_call,
             post_call=post_call,
             name=name,

@@ -1,10 +1,10 @@
-site_name: Tanto
+site_name: Syncra
 site_url: 
 site_dir: docs
 site_description: A simple and beautiful theme for MkDocs.
 site_author: Alexander Epstein
-repo_name: tanto
-repo_url: https://github.com/alexanderepstein/tanto
+repo_name: syncra
+repo_url: https://github.com/alexanderepstein/syncra
 
 nav: 
   - Home: 
@@ -18,7 +18,7 @@ nav:
   - Development: 
       - development/index.md
       - Environment: development/environment.md
-      - Coverage Report: development/coverage_report.md
+      - Coverage Report: coverage_report.md
   - Code Reference: reference/
   
 
@@ -55,6 +55,7 @@ theme:
 plugins:
   - autorefs
   - search
+  - git-authors
   - gen-files:
       scripts: 
         - docs/gen_ref_pages.py
@@ -77,7 +78,7 @@ plugins:
             show_type_annotations: true
   - coverage:
       page_name: coverage_report
-      html_report_dir: development
+      html_report_dir: docs/development/coverage
 
 markdown_extensions:
   - admonition

@@ -5,7 +5,7 @@
 groups = ["default", "dev", "docs"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:fcb0622510f2be990c881da2a728ebe5e450536159a643487b332027f4b0f486"
+content_hash = "sha256:407752fdb13e1fba2a21713990d381b85179fbb6aec3bd7b1b70a6c7130279ec"
 
 [[metadata.targets]]
 requires_python = ">=3.8"
@@ -686,6 +686,20 @@ dependencies = [
 files = [
     {file = "mkdocs_get_deps-0.2.0-py3-none-any.whl", hash = "sha256:2bf11d0b133e77a0dd036abeeb06dec8775e46efa526dc70667d8863eefc6134"},
     {file = "mkdocs_get_deps-0.2.0.tar.gz", hash = "sha256:162b3d129c7fad9b19abfdcb9c1458a651628e4b1dea628ac68790fb3061c60c"},
+]
+
+[[package]]
+name = "mkdocs-git-authors-plugin"
+version = "0.9.0"
+requires_python = ">=3.7"
+summary = "Mkdocs plugin to display git authors of a page"
+groups = ["docs"]
+dependencies = [
+    "mkdocs>=1.0",
+]
+files = [
+    {file = "mkdocs_git_authors_plugin-0.9.0-py3-none-any.whl", hash = "sha256:380730a05eeb947a7e84be05fdb1c5ae2a7bc70fd9f6eda941f187c87ae37052"},
+    {file = "mkdocs_git_authors_plugin-0.9.0.tar.gz", hash = "sha256:6161f63b87064481a48d9ad01c23e43c3e758930c3a9cc167fe482909ceb9eac"},
 ]
 
 [[package]]
