@@ -9,8 +9,8 @@ import pytest
 from syncra import Task
 from syncra._exceptions import FailedDependencyError
 
-
 _T = TypeVar("_T")
+
 
 class TestException(Exception):
     pass
@@ -25,13 +25,16 @@ def sync_sleep(seconds, *args, **kwargs) -> str:
     sleep(seconds)
     return f"{seconds=}"
 
+
 def sync_sleep_output_seconds(seconds, *args, **kwargs):
     sleep(seconds)
     return seconds
 
+
 def kwargs_sleep(*args, seconds=0, **kwargs):
     sleep(seconds)
     return f"{seconds=}"
+
 
 def throw_exception():
     raise TestException("This is an exception")
@@ -61,15 +64,18 @@ def test_graph_sync_execution():
     assert results[c] == "seconds=1"
     assert results[d] == "seconds=0.5"
 
+
 def example_pre_call(*args, **kwargs):
     return {"new_key": "new_value"}
+
 
 def example_post_call(result: _T, *args):
     pass
 
+
 def test_graph_sync_execution_pre_post_call():
     a = Task(partial(sync_sleep, 1))
-    b = Task(partial(sync_sleep_output_seconds, 0.5), output_names=("seconds", ))
+    b = Task(partial(sync_sleep_output_seconds, 0.5), output_names=("seconds",))
     c = Task(kwargs_sleep, a & b)
     d = Task(kwargs_sleep, b)
     results = a.graph(pre_call=example_pre_call, post_call=example_post_call)

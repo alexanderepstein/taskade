@@ -1,6 +1,6 @@
 from typing import Awaitable, Callable, Dict, Optional, Tuple, TypeVar, Union
 
-from syncra._execution import Graph, Task
+from syncra._execution import Graph, PostCallProtocol, PreCallProtocol, Task
 
 _T = TypeVar("_T")
 """Type variable for the return type of a task"""
@@ -68,9 +68,10 @@ def task(
     *,
     dependencies: Union[Union[Tuple[str, ...], str], Union[Task, Tuple[Task, ...]]] = (),
     output_names: Tuple[str, ...] = (),
-    pre_call: Optional[Callable[[_T], None]] = None,
-    post_call: Optional[Callable[[_T], None]] = None,
+    pre_call: PreCallProtocol = None,
+    post_call: PostCallProtocol = None,
     name: Optional[str] = None,
+    init_kwargs: Optional[Dict[str, _T]] = None,
 ) -> Callable[[Callable[..., Union[_T, Awaitable[_T]]]], Callable[..., Union[_T, Awaitable[_T]]]]:
     """
     Decorator to create a Task with its dependencies and associate it with a named graph.
@@ -78,9 +79,10 @@ def task(
     :param graph_name: The name of the graph to associate the task with
     :param dependencies: A tuple of Task objects or names of tasks within the same graph that this task depends on
     :param output_names: A tuple of output names for the task
-    :param pre_call: An optional function to be called before the task execution
-    :param post_call: An optional function to be called after the task execution
-    :param name: An optional name for the task
+    :param pre_call: An optional function to be called before the task execution, defaults to None
+    :param post_call: An optional function to be called after the task execution, defaults to None
+    :param name: An optional name for the task, defaults to None
+    :param init_kwargs: Optional kwargs to use for executing the task, defaults to None
     :return: A decorator function that wraps the task function
     """
 
@@ -111,6 +113,7 @@ def task(
             pre_call=pre_call,
             post_call=post_call,
             name=name,
+            init_kwargs=init_kwargs,
         )
 
         # Add the task to the graph
