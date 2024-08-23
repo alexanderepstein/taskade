@@ -1,7 +1,6 @@
-from typing import Dict, Self, TypeVar
+from typing import Dict, Self
 
-_T = TypeVar("_T")
-"""Type variable for the return type of a task"""
+from syncra._types import _T
 
 
 class SyncraError(Exception):
