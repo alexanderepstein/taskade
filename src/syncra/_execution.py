@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from functools import lru_cache, wraps
 from graphlib import TopologicalSorter
 from importlib import import_module
-from typing import (Awaitable, Callable, Dict, List, Optional, Protocol, Self,
-                    Set, Tuple, Type, Union, cast)
+from typing import (Awaitable, Callable, Dict, List, Optional, Protocol, Set,
+                    Tuple, Type, Union, cast)
 
 from syncra._exceptions import FailedDependencyError
 from syncra._types import _T, PoolExecutor
@@ -181,7 +181,7 @@ class Graph(TopologicalSorter):
         return graph
 
     @property
-    def unsorted_graph(self: Self) -> Dict[Task, Tuple[Task, ...]]:
+    def unsorted_graph(self: Graph) -> Dict[Task, Tuple[Task, ...]]:
         """
         The unsorted version of the graph
 
@@ -190,7 +190,7 @@ class Graph(TopologicalSorter):
         return self._node_to_dependencies
 
     @property
-    def is_async(self: Self) -> bool:
+    def is_async(self: Graph) -> bool:
         """
         Indicates if the graph is async
 
@@ -198,7 +198,7 @@ class Graph(TopologicalSorter):
         """
         return self.__is_async
 
-    def __add__(self: Self, task: Task) -> Graph:
+    def __add__(self: Graph, task: Task) -> Graph:
         """
         Adds a task to the graph
 
@@ -212,7 +212,7 @@ class Graph(TopologicalSorter):
         self.add(task, *task.dependencies)
         return self
 
-    def __iadd__(self: Self, task: Task) -> Graph:
+    def __iadd__(self: Graph, task: Task) -> Graph:
         """
         In place addition operator for adding a task to the graph
 
@@ -222,7 +222,7 @@ class Graph(TopologicalSorter):
         return self + task
 
     def __call__(
-        self: Self,
+        self: Graph,
         pre_call: Optional[PreCallProtocol] = None,
         post_call: Optional[PostCallProtocol] = None,
         raise_immediately: bool = True,
@@ -363,7 +363,7 @@ class Task:
             self.graph + other
 
     @property
-    def is_async(self: Self) -> bool:
+    def is_async(self: Task) -> bool:
         """
         Indicates if the task is async
 
@@ -372,7 +372,7 @@ class Task:
         return asyncio.iscoroutinefunction(self.func)
 
     @property
-    def id(self: Self) -> str:
+    def id(self: Task) -> str:
         """
         The id for the task
 
@@ -381,7 +381,7 @@ class Task:
         return self.__id
 
     @property
-    def graph(self: Self) -> Optional[Graph]:
+    def graph(self: Task) -> Optional[Graph]:
         """
         The underlying graph for the task
 
@@ -389,7 +389,7 @@ class Task:
         """
         return self._graph if self._graph is None or isinstance(self._graph, Graph) else self._graph()
 
-    def __hash__(self: Self) -> int:
+    def __hash__(self: Task) -> int:
         """
         Hash function for the task, this lets it be stored in hashable types (sets, as dict keys etc...)
 
@@ -397,7 +397,7 @@ class Task:
         """
         return int(self.__id) if self.name is None else hash(self.name)
 
-    def __and__(self: Self, other: Task) -> Tuple[Task, ...]:
+    def __and__(self: Task, other: Task) -> Tuple[Task, ...]:
         """
         Binary and operator for the task
         This allows for the syntax task_a & task_b when defining dependencies for another graph
@@ -410,7 +410,7 @@ class Task:
         self._set_graph(other)
         return (self, other)
 
-    def __rand__(self: Self, other: Task) -> Tuple[Task, ...]:
+    def __rand__(self: Task, other: Task) -> Tuple[Task, ...]:
         """
         Binary and operator for the task
         This allows for the syntax task_a & task_b when defining dependencies for another graph
