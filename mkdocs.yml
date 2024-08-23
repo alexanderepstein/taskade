@@ -13,11 +13,10 @@ nav:
     - Changelog: changelog.md
     - License: license.md
   - Usage:
-    - Basic Usage: usage/basic_usage.md
+    - usage/index.md
     - Advanced Usage: usage/advanced_usage.md
   - Development: 
       - development/index.md
-      - Environment: development/environment.md
       - Coverage Report: coverage_report.md
   - Code Reference: reference/
   
