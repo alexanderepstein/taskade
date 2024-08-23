@@ -1,5 +1,6 @@
-from syncra._decorator import get_graph, task
-from syncra._execution import Graph, Task, aexecute_graph, execute_graph
+from syncra._decorator import task
+from syncra._execution import (Graph, Task, aexecute_graph, execute_graph,
+                               get_graph)
 
 __all__ = ["task", "Graph", "Task", "aexecute_graph", "execute_graph", "get_graph"]
-__version = "0.0.1"
+__version__ = "0.0.1"

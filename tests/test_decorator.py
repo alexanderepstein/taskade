@@ -44,7 +44,7 @@ async def task_c(a_output: str, b_output: str) -> str:
     return "Task C completed"
 
 
-@task(graph_name="my_graph", dependencies=task_c)
+@task(graph_name="my_graph", dependencies="task_c")
 @task(graph_name="my_graph2", dependencies="task_b_1")
 def task_d(*args, **kwargs):
     sleep(0.1)

@@ -1,22 +1,8 @@
-from typing import Awaitable, Callable, Dict, Optional, Tuple, TypeVar, Union
+from typing import Awaitable, Callable, Dict, Optional, Tuple, Union
 
-from syncra._execution import Graph, PostCallProtocol, PreCallProtocol, Task
-
-_T = TypeVar("_T")
-"""Type variable for the return type of a task"""
-
-__graphs: Dict[str, Graph] = {}
-"""Dictionary of graphs by name"""
-
-
-def get_graph(graph_name: str) -> Optional[Graph]:
-    """
-    Retrieve a graph by name from the global graph dictionary.
-
-    :param graph_name: The name of the graph to retrieve
-    :return: The retrieved Graph object or None if not found
-    """
-    return __graphs.get(graph_name)
+from syncra._execution import (Graph, PostCallProtocol, PreCallProtocol, Task,
+                               _get_graph)
+from syncra._types import _T
 
 
 def __map_dependencies(
@@ -40,7 +26,7 @@ def __map_dependencies(
         mapped_dependencies = []
         for dependency in dependencies:
             try:
-                mapped_dependencies.append(__graphs[graph_name][dependency])
+                mapped_dependencies.append(_get_graph()[graph_name][dependency])
             except KeyError:
                 raise ValueError(
                     f"Task {task_name} within graph {graph_name} has a dependency {dependency} on a function that has not been decorated or names for decorated functions are misaligned to their dependency usage."
@@ -56,10 +42,10 @@ def __retrieve_or_create_graph(graph_name: str) -> Graph:
     :param graph_name: The name of the graph to retrieve or create
     :return: The retrieved or created Graph object
     """
-    graph = __graphs.get(graph_name)
+    graph = _get_graph().get(graph_name)
     if graph is None:
         graph = Graph(name=graph_name)
-        __graphs[graph_name] = graph
+        _get_graph()[graph_name] = graph
     return graph
 
 
