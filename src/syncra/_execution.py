@@ -6,23 +6,37 @@ from collections import UserDict
 from concurrent import futures
 from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass, field
-from functools import wraps
+from functools import lru_cache, wraps
 from graphlib import TopologicalSorter
+from importlib import import_module
 from typing import (Awaitable, Callable, Dict, List, Optional, Protocol, Self,
-                    Set, Tuple, Type, TypeVar, Union, cast)
+                    Set, Tuple, Type, Union, cast)
 
 from syncra._exceptions import FailedDependencyError
+from syncra._types import _T, PoolExecutor
 
-_T = TypeVar("_T")
-"""Type variable for the return type of a task"""
 
-PoolExecutor = TypeVar(
-    "PoolExecutor",
-    bound=Union[
-        Union[Union[ThreadPoolExecutor, ProcessPoolExecutor], Type[ThreadPoolExecutor]], Type[ProcessPoolExecutor]
-    ],
-)
-"""Type variable for the pool type passed to concurrent execution"""
+@lru_cache(maxsize=1)
+def _get_graph() -> Dict[str, Graph]:
+    """
+    Get the graph dictionary
+
+    Wrapping in a function to allow for lru_cache to be used
+    without putting the cache on the global scope
+
+    :return: the graph dictionary
+    """
+    return {}
+
+
+def get_graph(graph_name: str) -> Optional[Graph]:
+    """
+    Retrieve a graph by name from the global graph dictionary.
+
+    :param graph_name: The name of the graph to retrieve
+    :return: The retrieved Graph object or None if not found
+    """
+    return _get_graph().get(graph_name)
 
 
 def _get_args_from_dependencies(
@@ -45,18 +59,33 @@ def _get_args_from_dependencies(
     return args, kwargs
 
 
-def _execute_pre_call(pre_call: Optional[PreCallProtocol], *args, **kwargs) -> Dict[str, _T]:
+class PreCallProtocol(Protocol):
+    """Protocol for the pre_call function"""
+
+    def __call__(
+        self, task: Task, *args: Tuple[_T, ...], **kwargs: Dict[str, _T]
+    ) -> Optional[Dict[str, _T]]: ...  # pragma: no cover
+
+
+def _execute_pre_call(pre_call: Optional[PreCallProtocol], task: Task, *args, **kwargs) -> Dict[str, _T]:
     """
     Executes the pre_call function and optionally updates the kwargs
 
     :param pre_call: optional pre_call function, defaults to None
+    :param task: the task that will be executed after the pre_call
     :return: the kwargs to use for the invocation of the task
     """
     if pre_call:
-        pre_call_kwargs = pre_call(*args, **kwargs)
+        pre_call_kwargs = pre_call(task, *args, **kwargs)
         if pre_call_kwargs:
             kwargs.update(pre_call_kwargs)
     return kwargs
+
+
+class PostCallProtocol(Protocol):
+    """Protocol for the post_call function"""
+
+    def __call__(self, result: _T, *args: Tuple[_T, ...]) -> None: ...  # pragma: no cover
 
 
 def _execute_post_call(post_call: Optional[PostCallProtocol], task: Task, result: _T, results: Dict[str, _T]) -> None:
@@ -114,6 +143,8 @@ class Graph(TopologicalSorter):
                 self.add(task, *task.dependencies)
                 if not self.__is_async:
                     self.__is_async = task.is_async
+        if self.name:
+            _get_graph()[self.name] = self
 
     def __getitem__(self, key: str) -> Task:
         """
@@ -127,6 +158,27 @@ class Graph(TopologicalSorter):
             if task.name == key:
                 return task
         raise KeyError(f"Task {key} not found in graph.")
+
+    @classmethod
+    def from_list(
+        cls: Type[Graph],
+        graph_name: str,
+        tasks_list: List[Dict[str, str]],
+        func_map: Optional[Dict[str, Callable[..., Union[_T, Awaitable[_T]]]]] = None,
+    ) -> Graph:
+        """
+        Create a graph from a list of tasks
+
+        :param cls: the class object of the graph
+        :param graph_name: the name of the graph to create
+        :param tasks_list: the list of tasks to add to the graph
+        :param func_map: optional mapping of function names to their function, defaults to None
+        :return: the graph object
+        """
+        graph = cls(name=graph_name)
+        for task_dict in tasks_list:
+            graph += Task.from_dict(task_dict, func_map)
+        return graph
 
     @property
     def unsorted_graph(self: Self) -> Dict[Task, Tuple[Task, ...]]:
@@ -155,6 +207,7 @@ class Graph(TopologicalSorter):
         """
         if not self.__is_async:
             self.__is_async = task.is_async
+        task._graph = self if not self._node_to_dependencies else weakref.ref(self)
         self._node_to_dependencies[task] = task.dependencies
         self.add(task, *task.dependencies)
         return self
@@ -194,18 +247,6 @@ class Graph(TopologicalSorter):
             return aexecute_graph(self, pre_call, post_call, raise_immediately, tasks_semaphore)
         else:
             return execute_graph(self, pre_call, post_call, raise_immediately, concurrency_pool, n_jobs)
-
-
-class PreCallProtocol(Protocol):
-    """Protocol for the pre_call function"""
-
-    def __call__(self, *args: Tuple[_T, ...], **kwargs: Dict[str, _T]) -> Optional[Dict[str, _T]]: ...
-
-
-class PostCallProtocol(Protocol):
-    """Protocol for the post_call function"""
-
-    def __call__(self, result: _T, *args: Tuple[_T, ...]) -> None: ...
 
 
 class GraphResults(UserDict):
@@ -275,6 +316,30 @@ class Task:
         self.dependencies = cast(Tuple[Task, ...], self.dependencies)
         for dependent_task in self.dependencies:
             self._set_graph(dependent_task)
+
+    @classmethod
+    def from_dict(
+        cls: Type[Task],
+        task_dict: Dict[str, str],
+        func_map: Optional[Dict[str, Callable[..., Union[_T, Awaitable[_T]]]]] = None,
+    ) -> Task:
+        """
+        Create a task from a dictionary
+
+        :param task_dict: the dictionary of the task
+        :param func_map: the mapping of the function names to the functions
+        :return: the task object
+        """
+        func = task_dict.pop("func")
+        if func_map and func in func_map:
+            task = cls(func_map[func], **task_dict)
+        else:
+            # Attempt to import the function dynamically
+            module_name, func_name = func.rsplit(".", 1)
+            module = import_module(module_name)
+            task = cls(getattr(module, func_name), **task_dict)
+        task_dict["func"] = func
+        return task
 
     def _set_graph(self, other: Task) -> None:
         """
@@ -389,7 +454,7 @@ def _concurrent_execute_graph(
             available_task = cast(Task, available_task)
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
-            call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
+            call_kwargs = _execute_pre_call(task_pre_call, available_task, *call_args, **call_kwargs)
             if available_task.init_kwargs:
                 call_kwargs.update(available_task.init_kwargs)
             # TODO: Look for a way around submit as we lose the chunksize behavior offered by pool.map
@@ -444,7 +509,7 @@ def _sync_execute_graph(
             available_task = cast(Task, available_task)
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
-            call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
+            call_kwargs = _execute_pre_call(task_pre_call, available_task, *call_args, **call_kwargs)
             if available_task.init_kwargs:
                 call_kwargs.update(available_task.init_kwargs)
             try:
@@ -575,7 +640,7 @@ async def aexecute_graph(
                 executing_func = available_task.func
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
-            call_kwargs = _execute_pre_call(task_pre_call, *call_args, **call_kwargs)
+            call_kwargs = _execute_pre_call(task_pre_call, available_task, *call_args, **call_kwargs)
             if available_task.init_kwargs:
                 call_kwargs.update(available_task.init_kwargs)
             # TODO: Look into using asyncio.wait instead of the queue, assumption is possible speed improvement?

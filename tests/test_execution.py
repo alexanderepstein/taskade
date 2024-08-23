@@ -12,7 +12,7 @@ from syncra._exceptions import FailedDependencyError
 _T = TypeVar("_T")
 
 
-class TestException(Exception):
+class ExampleException(Exception):
     pass
 
 
@@ -37,7 +37,7 @@ def kwargs_sleep(*args, seconds=0, **kwargs):
 
 
 def throw_exception():
-    raise TestException("This is an exception")
+    raise ExampleException("This is an exception")
 
 
 @pytest.mark.asyncio
@@ -127,7 +127,7 @@ async def test_graph_aexecution_with_failed_task_immediately():
     a = Task(partial(asleep, 1), dependencies=(failed_dependency,))
     try:
         await a.graph(raise_immediately=True)
-    except TestException:
+    except ExampleException:
         return
     assert False, "TestException not raised"
 
@@ -147,7 +147,7 @@ def test_graph_sync_execution_with_failed_task_immediately():
     a = Task(partial(sleep, 1), dependencies=(failed_dependency,))
     try:
         a.graph(raise_immediately=True)
-    except TestException:
+    except ExampleException:
         return
     assert False, "TestException not raised"
 
@@ -167,6 +167,6 @@ def test_graph_concurrent_execution_with_failed_task_immediately():
     a = Task(partial(sleep, 1), dependencies=(failed_dependency,))
     try:
         a.graph(raise_immediately=True, n_jobs=2)
-    except TestException:
+    except ExampleException:
         return
     assert False, "TestException not raised"
