@@ -65,7 +65,7 @@ async def test_graph_execution():
     graph = get_graph("my_graph")
 
     # Execute the graph if it exists
-    results = await graph()
+    results = await graph.execute()
     assert tuple(results.values()) == (
         "Task A completed",
         "Task B completed",
@@ -83,7 +83,7 @@ async def test_init_kwargs_graph_execution():
     graph = get_graph("init_kwargs_graph")
 
     # Execute the graph if it exists
-    results = await graph()
+    results = await graph.execute()
     assert tuple(results.values()) == ("init",)
 
 
@@ -96,7 +96,7 @@ async def test_graph2_execution():
     graph = get_graph("my_graph2")
 
     # Execute the graph if it exists
-    results = await graph()
+    results = await graph.execute()
     assert tuple(results.values()) == (
         "Task A completed",
         "Task B completed",

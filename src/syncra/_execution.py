@@ -7,10 +7,10 @@ from concurrent import futures
 from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from functools import lru_cache, wraps
-from graphlib import TopologicalSorter
 from importlib import import_module
-from typing import (Awaitable, Callable, Dict, List, Optional, Protocol, Set,
-                    Tuple, Type, Union, cast)
+from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Type, Union, cast
+
+from graphlib import TopologicalSorter
 
 from syncra._exceptions import FailedDependencyError
 from syncra._types import _T, PoolExecutor
@@ -40,22 +40,29 @@ def get_graph(graph_name: str) -> Optional[Graph]:
 
 
 def _get_args_from_dependencies(
-    dependencies: Tuple[Task, ...], results: Dict[Task, _T]
+    dependencies: Tuple[Task, ...], results: Dict[Task, Union[_T, Tuple[_T, ...]]]
 ) -> Tuple[List[_T], Dict[str, _T]]:
+    """
+    Get the arguments from the dependencies
+
+    :param dependencies: the dependencies to get the arguments from
+    :param results: the results of the tasks up until this point
+    :return: the args and kwargs to use for the invocation of the task
+    """
     args = []
     kwargs = {}
     for dependency in dependencies:
         if dependency.output_names:
             if isinstance(results[dependency], tuple):
-                for name, result in zip(dependency.output_names, results[dependency]):
+                for name, result in zip(dependency.output_names, cast(Iterable[_T], results[dependency])):
                     kwargs[name] = result
             else:
-                kwargs[dependency.output_names[0]] = results[dependency]
+                kwargs[dependency.output_names[0]] = cast(_T, results[dependency])
         else:
             if isinstance(results[dependency], tuple):
-                args.extend(results[dependency])
+                args.extend(cast(Tuple[_T, ...], results[dependency]))
             else:
-                args.append(results[dependency])
+                args.append(cast(_T, results[dependency]))
     return args, kwargs
 
 
@@ -88,7 +95,9 @@ class PostCallProtocol(Protocol):
     def __call__(self, result: _T, *args: Tuple[_T, ...]) -> None: ...  # pragma: no cover
 
 
-def _execute_post_call(post_call: Optional[PostCallProtocol], task: Task, result: _T, results: Dict[str, _T]) -> None:
+def _execute_post_call(
+    post_call: Optional[PostCallProtocol], task: Task, result: _T, results: Dict[Task, Union[Any, Tuple[Any, ...]]]
+) -> None:
     """
     Executs the post_call function
 
@@ -98,10 +107,14 @@ def _execute_post_call(post_call: Optional[PostCallProtocol], task: Task, result
     :param results: results of execution up until this point
     """
     if post_call:
-        post_call(
-            result,
-            *(results[dependent_task] for dependent_task in task.dependencies),
-        )
+        result_args = []
+        for dependent_task in task.dependencies:
+            dependent_task_results = results[dependent_task]
+            if isinstance(dependent_task_results, tuple):
+                result_args.extend(dependent_task_results)
+            else:
+                result_args.append(dependent_task_results)
+        post_call(result, *result_args)
 
 
 def _get_eligble_tasks(available_tasks: Tuple[Task, ...], results: Dict[Task, _T]) -> Tuple[Task, ...]:
@@ -221,6 +234,34 @@ class Graph(TopologicalSorter):
         """
         return self + task
 
+    def execute(
+        self: Graph,
+        pre_call: Optional[PreCallProtocol] = None,
+        post_call: Optional[PostCallProtocol] = None,
+        raise_immediately: bool = True,
+        tasks_semaphore: Optional[asyncio.Semaphore] = None,
+        concurrency_pool: PoolExecutor = ThreadPoolExecutor,
+        n_jobs: Optional[int] = None,
+    ) -> Union[GraphResults, Awaitable[GraphResults]]:
+        """
+        Executes the graph
+
+        :param pre_call: default pre_call function to use for execution, task level pre_call functions take precedence over this, defaults to pass_through
+        :param post_call: default post_call function to use for execution, task level post_call functions take precendence over this, defaults to None
+        :param raise_immediately: indicates if any exception raised by a node in the graph should be raised immediately,
+        if False the graph will continue to execute as long as there are nodes that are not dependent on a failed task, defaults to True
+        :param tasks_semaphore: only applies to async execution, the semaphore to control the number of tasks running concurrently, defaults to None
+        :param concurrency_pool: only applies to non-async execution, pool for executing a graph concurrently, this pool will be used for executing the individual tasks,
+        can either provide an instance of a thread or process pool or specify the type of pool and set the n_jobs parameter, defaults to ThredPoolExecutor type
+        :param n_jobs: only applies to non-async execution, optional number of jobs for executing a graph concurrently, defaults to None
+        :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
+        :return: if the graph is async this will return the awaitable, otherwise this will return the result of the graph execution
+        """
+        if self.is_async:
+            return aexecute_graph(self, pre_call, post_call, raise_immediately, tasks_semaphore)
+        else:
+            return execute_graph(self, pre_call, post_call, raise_immediately, concurrency_pool, n_jobs)
+
     def __call__(
         self: Graph,
         pre_call: Optional[PreCallProtocol] = None,
@@ -229,7 +270,7 @@ class Graph(TopologicalSorter):
         tasks_semaphore: Optional[asyncio.Semaphore] = None,
         concurrency_pool: PoolExecutor = ThreadPoolExecutor,
         n_jobs: Optional[int] = None,
-    ) -> Union[Dict[str, _T], Awaitable[Dict[str, _T]]]:
+    ) -> Union[GraphResults, Awaitable[GraphResults]]:
         """
             Executes the graph
             :param pre_call: default pre_call function to use for execution, task level pre_call functions take precedence over this, defaults to pass_through
@@ -243,10 +284,7 @@ class Graph(TopologicalSorter):
             :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
             :return: if the graph is async this will return the awaitable, otherwise this will return the result of the graph execution
         """
-        if self.is_async:
-            return aexecute_graph(self, pre_call, post_call, raise_immediately, tasks_semaphore)
-        else:
-            return execute_graph(self, pre_call, post_call, raise_immediately, concurrency_pool, n_jobs)
+        return self.execute(pre_call, post_call, raise_immediately, tasks_semaphore, concurrency_pool, n_jobs)
 
 
 class GraphResults(UserDict):
@@ -269,10 +307,10 @@ class GraphResults(UserDict):
 class Task:
     """The task object, wrapping a function and its dependencies"""
 
-    func: Callable[..., Union[_T, Awaitable[_T]]]
+    func: Callable[..., Union[Any, Awaitable[Any]]]
     """The function that that task is wrapping"""
 
-    dependencies: Union[Tuple[Task, ...], Task] = ()
+    dependencies: Tuple[Task, ...] = ()
     """The dependencies of the task"""
 
     output_names: Tuple[str, ...] = ()
@@ -284,7 +322,7 @@ class Task:
     post_call: Optional[PostCallProtocol] = field(default=None, kw_only=True)
     """The function to call with the output of this task"""
 
-    init_kwargs: Optional[Dict[str, _T]] = field(default=None, kw_only=True)
+    init_kwargs: Optional[Dict[str, Any]] = field(default=None, kw_only=True)
     """The optional initialization arguments for the task"""
 
     name: Optional[str] = field(default=None, kw_only=True)
@@ -293,10 +331,7 @@ class Task:
     _graph: Optional[Union[Graph, weakref.ref[Graph]]] = None
     """The optional graph where this task is part of the execution"""
 
-    __id: Optional[str] = None
-    """The id of the task"""
-
-    def __call__(self, *args, **kwargs) -> Union[Union[_T, Tuple[_T, ...]], Awaitable[Union[_T, Tuple[_T, ...]]]]:
+    def __call__(self, *args, **kwargs) -> Union[_T, Awaitable[_T]]:
         """
         Executes the function within the task
 
@@ -308,19 +343,17 @@ class Task:
         """
         Post initialization for the task, this performs the necessary manipulations on the internal state
         """
-        self.__id = str(id(self))
         if self.name is None:
-            self.name = self.__id
+            self.name = self.id
         if isinstance(self.dependencies, Task):
             self.dependencies = (self.dependencies,)
-        self.dependencies = cast(Tuple[Task, ...], self.dependencies)
         for dependent_task in self.dependencies:
             self._set_graph(dependent_task)
 
     @classmethod
     def from_dict(
         cls: Type[Task],
-        task_dict: Dict[str, str],
+        task_dict: Dict[str, Any],
         func_map: Optional[Dict[str, Callable[..., Union[_T, Awaitable[_T]]]]] = None,
     ) -> Task:
         """
@@ -337,11 +370,16 @@ class Task:
             # Attempt to import the function dynamically
             module_name, func_name = func.rsplit(".", 1)
             module = import_module(module_name)
-            task = cls(getattr(module, func_name), **task_dict)
+            # Check type of func to ensure it is a callable
+            func = getattr(module, func_name)
+            if not isinstance(func, Callable):
+                raise ValueError(f"Function {func_name} in module {module_name} is not callable.")
+            func = cast(Callable[..., Union[_T, Awaitable[_T]]], func)
+            task = cls(func, **task_dict)
         task_dict["func"] = func
         return task
 
-    def _set_graph(self, other: Task) -> None:
+    def _set_graph(self: Task, other: Task) -> None:
         """
         Ensures that this task and an other task are tied to the same graph, whichever task is tied to an existing graph then the other will
         be provided a weak reference to the graph through the task tied to it. If neither task are tied to a graph then a graph will be created
@@ -351,16 +389,18 @@ class Task:
         :raises ValueError: if both tasks have a graph and they are not the same graph
         """
         if self._graph is None:
-            if other.graph is not None:
-                other.graph + self
-                self._graph = weakref.ref(other.graph)
+            graph = other.graph
+            if graph is not None:
+                self._graph = weakref.ref(graph)
+                graph + self
             else:
                 self._graph = Graph((self, other))
                 other._graph = weakref.ref(self._graph)
         else:
             if other.graph is not None and self.graph != other.graph:
                 raise ValueError(f"Task {self.name} and Task {other.name} are in different graphs.")
-            self.graph + other
+            graph = cast(Graph, self.graph)
+            graph + other
 
     @property
     def is_async(self: Task) -> bool:
@@ -378,7 +418,7 @@ class Task:
 
         :return: a unique identifier for the task
         """
-        return self.__id
+        return str(id(self))
 
     @property
     def graph(self: Task) -> Optional[Graph]:
@@ -395,7 +435,7 @@ class Task:
 
         :return: the hash for the task, if a name is provided this is a hash of the name otherwise its a hash of the id
         """
-        return int(self.__id) if self.name is None else hash(self.name)
+        return id(self) if self.name is None else hash(self.name)
 
     def __and__(self: Task, other: Task) -> Tuple[Task, ...]:
         """
@@ -426,26 +466,26 @@ class Task:
 
 def _concurrent_execute_graph(
     graph: Graph,
+    concurrency_pool: Union[ThreadPoolExecutor, ProcessPoolExecutor],
     pre_call: Optional[PreCallProtocol] = None,
     post_call: Optional[PostCallProtocol] = None,
     raise_immediately: bool = True,
-    concurrency_pool: Union[ThreadPoolExecutor, ProcessPoolExecutor] = None,
-) -> Dict[str, _T]:
+) -> GraphResults:
     """
     Concurrently execute the graph
 
     :param graph: graph to execute
+    :param concurrency_pool: pool for executing a graph concurrently, this pool will be used for executing the individual tasks
     :param pre_call: default pre_call function to use for execution, task level pre_call functions take precedence over this, defaults to None
     :param post_call: default post_call function to use for execution, task level post_call functions take precendence over this, defaults to None
     :param raise_immediately: indicates if any exception raised by a node in the graph should be raised immediately,
     if False the graph will continue to execute as long as there are nodes that are not dependent on a failed task, defaults to True
-    :param concurrency_pool: pool for executing a graph concurrently, this pool will be used for executing the individual tasks
     :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
     :return: the result of the graph execution
     """
     graph.prepare()
-    results: Dict[Task, _T] = {}
-    task_futures: Set[Tuple[Future, Task]] = set()
+    results: Dict[Task, Union[Any, Tuple[Any, ...]]] = {}
+    task_futures: Set[Future[Any]] = set()
     task_future_map: Dict[Future, Task] = {}
     while graph.is_active():
         available_tasks = graph.get_ready()
@@ -464,15 +504,15 @@ def _concurrent_execute_graph(
 
         task_future = next(futures.as_completed(task_futures))
         task = task_future_map[task_future]
-        if task_future.exception():
+        if exception := task_future.exception():
             if raise_immediately:
                 # Cancel tasks before raising the exception,
                 # this may be caught on the outside and kept within the context of the pool
                 for task_future in task_futures:
                     task_future.cancel()
-                raise task_future.exception()
+                raise exception
             else:
-                result = task_future.exception()
+                result = exception
         else:
             result = task_future.result()
         task_futures.remove(task_future)
@@ -484,10 +524,10 @@ def _concurrent_execute_graph(
 
 def _sync_execute_graph(
     graph: Graph,
-    pre_call: PreCallProtocol = None,
-    post_call: PostCallProtocol = None,
+    pre_call: Optional[PreCallProtocol] = None,
+    post_call: Optional[PostCallProtocol] = None,
     raise_immediately: bool = True,
-) -> Dict[str, _T]:
+) -> GraphResults:
     """
     Execute the graph
 
@@ -501,7 +541,7 @@ def _sync_execute_graph(
     :return: the result of the graph execution
     """
     graph.prepare()
-    results: Dict[Task, _T] = {}
+    results: Dict[Task, Union[Any, Tuple[Any, ...]]] = {}
     while graph.is_active():
         available_tasks = graph.get_ready()
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
@@ -526,33 +566,33 @@ def _sync_execute_graph(
 
 def execute_graph(
     graph: Graph,
-    pre_call: PreCallProtocol = None,
-    post_call: PostCallProtocol = None,
+    pre_call: Optional[PreCallProtocol] = None,
+    post_call: Optional[PostCallProtocol] = None,
     raise_immediately: bool = True,
-    concurrency_pool: PoolExecutor = ThreadPoolExecutor,
+    concurrency_pool: Union[
+        ThreadPoolExecutor, ProcessPoolExecutor, Type[ThreadPoolExecutor], Type[ProcessPoolExecutor]
+    ] = ThreadPoolExecutor,
     n_jobs: Optional[int] = None,
-) -> Dict[str, _T]:
+) -> GraphResults:
     """
     Execute the graph with optional concurrency
 
     :param graph: graph to execute
     :param pre_call: default pre_call function to use for execution, task level pre_call functions take precedence over this, defaults to pass_through
-    :param post_call: default post_call function to use for execution, task level post_call functions take precendence over this, defaults to None
+    :param post_call: default post_call function to use for execution, task level post_call functions take precedence over this, defaults to None
     :param raise_immediately: indicates if any exception raised by a node in the graph should be raised immediately,
     if False the graph will continue to execute as long as there are nodes that are not dependent on a failed task, defaults to True
     :param concurrency_pool: pool for executing a graph concurrently, this pool will be used for executing the individual tasks,
-    can either provide an instance of a thread or process pool or specify the type of pool and set the n_jobs parameter, defaults to ThredPoolExecutor type
+    can either provide an instance of a thread or process pool or specify the type of pool and set the n_jobs parameter, defaults to ThreadPoolExecutor type
     :param n_jobs: optional number of jobs for executing a graph concurrently, defaults to None
     :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
     :return: the result of the graph execution
     """
-    if isinstance(concurrency_pool, ThreadPoolExecutor) or isinstance(concurrency_pool, ProcessPoolExecutor):
-        concurrency_pool = cast(Union[ThreadPoolExecutor, ProcessPoolExecutor], concurrency_pool)
-        result = _concurrent_execute_graph(graph, pre_call, post_call, raise_immediately, concurrency_pool)
-    elif n_jobs:
-        concurrency_pool = cast(Union[Type[ThreadPoolExecutor], Type[ProcessPoolExecutor]], concurrency_pool)
+    if isinstance(concurrency_pool, (ThreadPoolExecutor, ProcessPoolExecutor)):
+        result = _concurrent_execute_graph(graph, concurrency_pool, pre_call, post_call, raise_immediately)
+    elif n_jobs and concurrency_pool in (ThreadPoolExecutor, ProcessPoolExecutor):
         with concurrency_pool(max_workers=n_jobs) as pool:
-            result = _concurrent_execute_graph(graph, pre_call, post_call, raise_immediately, pool)
+            result = _concurrent_execute_graph(graph, pool, pre_call, post_call, raise_immediately)
     else:
         result = _sync_execute_graph(graph, pre_call, post_call, raise_immediately)
     return result
@@ -584,7 +624,7 @@ async def _aproducer(
     await result_queue.put((task, result))
 
 
-async def _aconsumer(result_queue: asyncio.Queue, raise_immediately: bool) -> Tuple[Task, _T]:
+async def _aconsumer(result_queue: asyncio.Queue, raise_immediately: bool) -> Tuple[Task, Union[Exception, Any]]:
     """
     Consumer for async function execution
     This call will wait until a result is available from the result queue
@@ -604,11 +644,11 @@ async def _aconsumer(result_queue: asyncio.Queue, raise_immediately: bool) -> Tu
 
 async def aexecute_graph(
     graph: Graph,
-    pre_call: PreCallProtocol = None,
-    post_call: PostCallProtocol = None,
+    pre_call: Optional[PreCallProtocol] = None,
+    post_call: Optional[PostCallProtocol] = None,
     raise_immediately: bool = True,
     tasks_semaphore: Optional[asyncio.Semaphore] = None,
-) -> Dict[str, _T]:
+) -> GraphResults:
     """
     Asynchronously execute the graph
 
@@ -623,7 +663,7 @@ async def aexecute_graph(
     """
     graph.prepare()
     result_queue = asyncio.Queue()
-    results: Dict[Task, _T] = {}
+    results: Dict[Task, Union[Any, Tuple[Any, ...]]] = {}
     while graph.is_active():
         available_tasks = graph.get_ready()
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
@@ -632,12 +672,12 @@ async def aexecute_graph(
             if not available_task.is_async:
 
                 @wraps(available_task.func)
-                async def async_wrapper(*args, **kwargs):
+                async def async_wrapper(*args, **kwargs) -> Any:
                     return available_task.func(*args, **kwargs)
 
                 executing_func = async_wrapper
             else:
-                executing_func = available_task.func
+                executing_func = cast(Callable[..., Awaitable[Any]], available_task.func)
             call_args, call_kwargs = _get_args_from_dependencies(available_task.dependencies, results)
             task_pre_call = available_task.pre_call if available_task.pre_call else pre_call
             call_kwargs = _execute_pre_call(task_pre_call, available_task, *call_args, **call_kwargs)
