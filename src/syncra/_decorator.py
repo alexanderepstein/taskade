@@ -1,7 +1,6 @@
-from typing import Awaitable, Callable, Dict, Optional, Tuple, Union
+from typing import Awaitable, Callable, Dict, Optional, Tuple, Union, cast
 
-from syncra._execution import (Graph, PostCallProtocol, PreCallProtocol, Task,
-                               _get_graph)
+from syncra._execution import Graph, PostCallProtocol, PreCallProtocol, Task, _get_graph
 from syncra._types import _T
 
 
@@ -23,6 +22,7 @@ def __map_dependencies(
     if isinstance(dependencies, str):
         dependencies = (dependencies,)
     if isinstance(dependencies, tuple) and len(dependencies) > 0 and isinstance(dependencies[0], str):
+        dependencies = cast(Tuple[str, ...], dependencies)
         mapped_dependencies = []
         for dependency in dependencies:
             try:
@@ -32,7 +32,7 @@ def __map_dependencies(
                     f"Task {task_name} within graph {graph_name} has a dependency {dependency} on a function that has not been decorated or names for decorated functions are misaligned to their dependency usage."
                 )
         dependencies = tuple(mapped_dependencies)
-    return dependencies
+    return cast(Tuple[Task, ...], dependencies)
 
 
 def __retrieve_or_create_graph(graph_name: str) -> Graph:
@@ -54,11 +54,11 @@ def task(
     *,
     dependencies: Union[Union[Tuple[str, ...], str], Union[Task, Tuple[Task, ...]]] = (),
     output_names: Tuple[str, ...] = (),
-    pre_call: PreCallProtocol = None,
-    post_call: PostCallProtocol = None,
+    pre_call: Optional[PreCallProtocol] = None,
+    post_call: Optional[PostCallProtocol] = None,
     name: Optional[str] = None,
     init_kwargs: Optional[Dict[str, _T]] = None,
-) -> Callable[[Callable[..., Union[_T, Awaitable[_T]]]], Callable[..., Union[_T, Awaitable[_T]]]]:
+) -> Callable[..., Task]:
     """
     Decorator to create a Task with its dependencies and associate it with a named graph.
 
@@ -76,7 +76,7 @@ def task(
         func: Union[Dict[str, Dict[str, Task]], Union[Task, Callable[..., Union[_T, Awaitable[_T]]]]],
         name: Optional[str] = name,
         dependencies: Union[Union[Tuple[str, ...], str], Union[Task, Tuple[Task, ...]]] = dependencies,
-    ) -> Callable[..., Union[_T, Awaitable[_T]]]:
+    ) -> Task:
         """
         Inner decorator function that wraps the task function.
 
@@ -88,6 +88,7 @@ def task(
         # Allow for multiple uses of the decorator on the same function
         if isinstance(func, Task):
             func = func.func
+        func = cast(Callable[..., Union[_T, Awaitable[_T]]], func)
         name = name if name else func.__name__
         graph = __retrieve_or_create_graph(graph_name)
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import Any, Dict
 
 from syncra._types import _T
 
@@ -14,7 +14,7 @@ class SyncraError(Exception):
 class FailedDependencyError(SyncraError):
     """Error for when all available tasks have at least one failed dependency."""
 
-    def __init__(self: SyncraError, message: str, partial_results: Dict[str, _T]):
+    def __init__(self: FailedDependencyError, message: str, partial_results: Dict[Any, _T]):
         """
         Initialize the FailedDependencyError.
 
