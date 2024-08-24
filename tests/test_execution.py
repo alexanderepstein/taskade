@@ -2,12 +2,13 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from time import sleep
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import pytest
 
 from syncra import Task
 from syncra._exceptions import FailedDependencyError
+from syncra._execution import Graph, GraphResults
 
 _T = TypeVar("_T")
 
@@ -40,13 +41,23 @@ def throw_exception():
     raise ExampleException("This is an exception")
 
 
+def example_pre_call(task: Task, *args, **kwargs):
+    return {"new_key": "new_value"}
+
+
+def example_post_call(result: _T, *args):
+    pass
+
+
 @pytest.mark.asyncio
 async def test_graph_aexecution():
     a = Task(partial(asleep, 1))
     b = Task(partial(asleep, 0.5))
     c = Task(partial(asleep, 1), a & b)
     d = Task(partial(asleep, 0.5), b)
-    results = await a.graph()
+    graph = cast(Graph, a.graph)
+    results = await graph.execute()
+    results = cast(GraphResults, results)
     assert results[a] == "seconds=1"
     assert results[b] == "seconds=0.5"
     assert results[c] == "seconds=1"
@@ -58,19 +69,13 @@ def test_graph_sync_execution():
     b = Task(partial(sync_sleep, 0.5))
     c = Task(partial(sync_sleep, 1), a & b)
     d = Task(partial(sync_sleep, 0.5), b)
-    results = a.graph()
+    graph = cast(Graph, a.graph)
+    results = graph.execute()
+    results = cast(GraphResults, results)
     assert results[a] == "seconds=1"
     assert results[b] == "seconds=0.5"
     assert results[c] == "seconds=1"
     assert results[d] == "seconds=0.5"
-
-
-def example_pre_call(*args, **kwargs):
-    return {"new_key": "new_value"}
-
-
-def example_post_call(result: _T, *args):
-    pass
 
 
 def test_graph_sync_execution_pre_post_call():
@@ -78,7 +83,9 @@ def test_graph_sync_execution_pre_post_call():
     b = Task(partial(sync_sleep_output_seconds, 0.5), output_names=("seconds",))
     c = Task(kwargs_sleep, a & b)
     d = Task(kwargs_sleep, b)
-    results = a.graph(pre_call=example_pre_call, post_call=example_post_call)
+    graph = cast(Graph, a.graph)
+    results = graph.execute(pre_call=example_pre_call, post_call=example_post_call)
+    results = cast(GraphResults, results)
     assert results[a] == "seconds=1"
     assert results[b] == 0.5
     assert results[c] == "seconds=0.5"
@@ -90,7 +97,9 @@ def test_graph_concurrent_execution_n_jobs():
     b = Task(partial(sync_sleep, 0.5))
     c = Task(partial(sync_sleep, 1), a & b)
     d = Task(partial(sync_sleep, 0.5), b)
-    results = a.graph(n_jobs=2)
+    graph = cast(Graph, a.graph)
+    results = graph.execute(n_jobs=2)
+    results = cast(GraphResults, results)
     assert results[a] == "seconds=1"
     assert results[b] == "seconds=0.5"
     assert results[c] == "seconds=1"
@@ -103,7 +112,8 @@ def test_graph_concurrent_execution_pool():
     c = Task(partial(sync_sleep, 1), a & b)
     d = Task(partial(sync_sleep, 0.5), b)
     with ThreadPoolExecutor(max_workers=2) as pool:
-        results = a.graph(concurrency_pool=pool)
+        results = a.graph.execute(concurrency_pool=pool)
+    results = cast(GraphResults, results)
     assert results[a] == "seconds=1"
     assert results[b] == "seconds=0.5"
     assert results[c] == "seconds=1"
@@ -114,8 +124,9 @@ def test_graph_concurrent_execution_pool():
 async def test_graph_aexecution_with_failed_dependency():
     failed_dependency = Task(throw_exception)
     a = Task(partial(asleep, 1), dependencies=(failed_dependency,))
+    graph = cast(Graph, a.graph)
     try:
-        await a.graph(raise_immediately=False)
+        await graph.execute(raise_immediately=False)
     except FailedDependencyError:
         return
     assert False, "FailedDependencyError not raised"
@@ -125,8 +136,9 @@ async def test_graph_aexecution_with_failed_dependency():
 async def test_graph_aexecution_with_failed_task_immediately():
     failed_dependency = Task(throw_exception)
     a = Task(partial(asleep, 1), dependencies=(failed_dependency,))
+    graph = cast(Graph, a.graph)
     try:
-        await a.graph(raise_immediately=True)
+        await graph.execute(raise_immediately=True)
     except ExampleException:
         return
     assert False, "TestException not raised"
@@ -135,8 +147,9 @@ async def test_graph_aexecution_with_failed_task_immediately():
 def test_graph_sync_execution_with_failed_dependency():
     failed_dependency = Task(throw_exception)
     a = Task(partial(sleep, 1), dependencies=(failed_dependency,))
+    graph = cast(Graph, a.graph)
     try:
-        a.graph(raise_immediately=False)
+        graph.execute(raise_immediately=False)
     except FailedDependencyError:
         return
     assert False, "FailedDependencyError not raised"
@@ -145,8 +158,9 @@ def test_graph_sync_execution_with_failed_dependency():
 def test_graph_sync_execution_with_failed_task_immediately():
     failed_dependency = Task(throw_exception)
     a = Task(partial(sleep, 1), dependencies=(failed_dependency,))
+    graph = cast(Graph, a.graph)
     try:
-        a.graph(raise_immediately=True)
+        graph.execute(raise_immediately=True)
     except ExampleException:
         return
     assert False, "TestException not raised"
@@ -155,8 +169,9 @@ def test_graph_sync_execution_with_failed_task_immediately():
 def test_graph_concurrent_execution_with_failed_dependency():
     failed_dependency = Task(throw_exception)
     a = Task(partial(sleep, 1), dependencies=(failed_dependency,))
+    graph = cast(Graph, a.graph)
     try:
-        a.graph(raise_immediately=False, n_jobs=2)
+        graph.execute(raise_immediately=False, n_jobs=2)
     except FailedDependencyError:
         return
     assert False, "FailedDependencyError not raised"
@@ -165,8 +180,9 @@ def test_graph_concurrent_execution_with_failed_dependency():
 def test_graph_concurrent_execution_with_failed_task_immediately():
     failed_dependency = Task(throw_exception)
     a = Task(partial(sleep, 1), dependencies=(failed_dependency,))
+    graph = cast(Graph, a.graph)
     try:
-        a.graph(raise_immediately=True, n_jobs=2)
+        graph.execute(raise_immediately=True, n_jobs=2)
     except ExampleException:
         return
     assert False, "TestException not raised"
