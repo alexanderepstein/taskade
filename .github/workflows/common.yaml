@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -37,11 +37,39 @@ jobs:
       uses: pdm-project/setup-pdm@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install testing dependencies
       run: |
-        pdm install -G :all
+        pdm install -G test
     - name: Run tests
       run: |
         pdm test
- 
 
+# Adding test for C Extension
+  test-c-extension:
+    name: Test C Extension
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup PDM
+      uses: pdm-project/setup-pdm@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Build with C Extension
+      run: |
+        C_GRAPHLIB_EXT=true pdm build
+    - name: Install testing dependencies
+      run: |
+        pdm install -G test
+    - name: Install generated wheel
+      run: |
+        pdm run pip install dist/*.whl --force-reinstall
+    - name: Delete the checked out repository
+      run: |
+        rm -rf ${{ github.workspace }}/src/syncra
+    - name: Run tests
+      run: |
+        pdm test
