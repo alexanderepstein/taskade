@@ -1,25 +1,32 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import weakref
 from collections import UserDict
 from concurrent import futures
 from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from functools import lru_cache, wraps
 from importlib import import_module
+from logging import getLogger
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Type, Union, cast
 from uuid import uuid4
 
 from syncra._exceptions import FailedDependencyError
 from syncra._types import _T, PoolExecutor
 
+log = getLogger(__name__)
+"""The logger for the module"""
+
 # Handle import of cgraphlib if available
 try:
+    if os.environ.get("USE_PYGRAPHLIB", "").lower() == "true":
+        raise ImportError("Using Python graphlib")
     from syncra.cgraphlib import TopologicalSorter
-    print("Using C extension")
+
     __cgraphlib__ = True
+    log.debug("Using C extension")
 except ImportError:
-    __cgraphlib__ = False
     from sys import version_info
 
     if version_info < (3, 9):
@@ -27,6 +34,9 @@ except ImportError:
             "graphlib is only supported on Python 3.9 or greater. To use syncra on Python 3.8 or lower, please install with the cgraphlib enabled."
         )
     from graphlib import TopologicalSorter
+
+    __cgraphlib__ = False
+    log.debug("Using Python graphlib")
 
 
 @lru_cache(maxsize=1)
@@ -156,17 +166,30 @@ def _get_eligble_tasks(available_tasks: Tuple[Task, ...], results: Dict[Task, _T
 class Graph:
     """The graph object, tying together multiple tasks together for execution of a DAG"""
 
-    def __init__(self, tasks: Optional[Tuple[Task, ...]] = None, name: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        tasks: Optional[Tuple[Task, ...]] = None,
+        name: Optional[str] = None,
+        initial_capacity: Optional[int] = None,
+    ) -> None:
         """
         Initializer for the graph
 
         :param tasks: tuple of tasks tied to this graph, defaults to None
         :param name: the identifier for the graph, defaults to None
+        :param initial_capactiy: the initial capacity of the graph, only applicable to cgraphlib, defaults to None
         """
         super().__init__()
-        self._results = None
+        self._results: Optional[GraphResults] = None
         self.__graph_add = self.__c_graph_add if __cgraphlib__ else self.__std_graph_add
-        self.__graph = TopologicalSorter()
+        if initial_capacity:
+            if __cgraphlib__:
+                self.__graph = TopologicalSorter(initial_capacity)  # type: ignore fix for cgraphlib
+            else:
+                log.warning("Initial capacity is only applicable to cgraphlib, ignoring.")
+                self.__graph = TopologicalSorter()
+        else:
+            self.__graph = TopologicalSorter()
         self.name = name
         self.__is_async = False
         self._node_to_dependencies: Dict[Task, Tuple[Task, ...]] = {}
@@ -346,7 +369,7 @@ class GraphResults(UserDict):
         :return: the result of the task
         """
         if isinstance(key, Task):
-            key = key.name
+            key = cast(str, key.name)
         return super().__getitem__(key)
 
 

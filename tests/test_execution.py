@@ -48,6 +48,7 @@ def example_pre_call(task: Task, *args, **kwargs):
 def example_post_call(result: _T, *args):
     pass
 
+
 async def test_graph_single_execution():
     a = Task(partial(sleep, 0.5), post_call=example_post_call)
     graph = cast(Graph, a.graph)
