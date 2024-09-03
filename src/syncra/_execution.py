@@ -10,10 +10,23 @@ from importlib import import_module
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Type, Union, cast
 from uuid import uuid4
 
-from graphlib import TopologicalSorter
-
 from syncra._exceptions import FailedDependencyError
 from syncra._types import _T, PoolExecutor
+
+# Handle import of cgraphlib if available
+try:
+    from syncra.cgraphlib import TopologicalSorter
+    print("Using C extension")
+    __cgraphlib__ = True
+except ImportError:
+    __cgraphlib__ = False
+    from sys import version_info
+
+    if version_info < (3, 9):
+        raise ImportError(
+            "graphlib is only supported on Python 3.9 or greater. To use syncra on Python 3.8 or lower, please install with the cgraphlib enabled."
+        )
+    from graphlib import TopologicalSorter
 
 
 @lru_cache(maxsize=1)
@@ -82,6 +95,8 @@ def _execute_pre_call(pre_call: Optional[PreCallProtocol], task: Task, *args, **
     :param task: the task that will be executed after the pre_call
     :return: the kwargs to use for the invocation of the task
     """
+    if not pre_call:
+        pre_call = task.pre_call
     if pre_call:
         pre_call_kwargs = pre_call(task, *args, **kwargs)
         if pre_call_kwargs:
@@ -106,6 +121,8 @@ def _execute_post_call(
     :param result: result of the completed task
     :param results: results of execution up until this point
     """
+    if not post_call:
+        post_call = task.post_call
     if post_call:
         result_args = []
         for dependent_task in task.dependencies:
@@ -136,7 +153,7 @@ def _get_eligble_tasks(available_tasks: Tuple[Task, ...], results: Dict[Task, _T
     return eligible_tasks
 
 
-class Graph(TopologicalSorter):
+class Graph:
     """The graph object, tying together multiple tasks together for execution of a DAG"""
 
     def __init__(self, tasks: Optional[Tuple[Task, ...]] = None, name: Optional[str] = None) -> None:
@@ -147,17 +164,38 @@ class Graph(TopologicalSorter):
         :param name: the identifier for the graph, defaults to None
         """
         super().__init__()
+        self._results = None
+        self.__graph_add = self.__c_graph_add if __cgraphlib__ else self.__std_graph_add
+        self.__graph = TopologicalSorter()
         self.name = name
         self.__is_async = False
         self._node_to_dependencies: Dict[Task, Tuple[Task, ...]] = {}
         if tasks:
             for task in tasks:
                 self._node_to_dependencies[task] = task.dependencies
-                self.add(task, *task.dependencies)
+                self.__graph_add(task)
                 if not self.__is_async:
                     self.__is_async = task.is_async
         if self.name:
             _get_graph()[self.name] = self
+
+    def __c_graph_add(self: Graph, task: Task) -> None:
+        """
+        Adds a task to the graph when using cgraphlib
+
+        :param task: the task to add to the graph
+        :return: the graph itself
+        """
+        self.__graph.add(task, task.dependencies)
+
+    def __std_graph_add(self: Graph, task: Task) -> None:
+        """
+        Adds a task to the graph when using std graphlib
+
+        :param task: the task to add to the graph
+        :return: the graph itself
+        """
+        self.__graph.add(task, *task.dependencies)
 
     def __getitem__(self, key: str) -> Task:
         """
@@ -194,6 +232,15 @@ class Graph(TopologicalSorter):
         return graph
 
     @property
+    def low_level_graph(self: Graph) -> TopologicalSorter:
+        """
+        The low level graph object
+
+        :return: the low level graph object
+        """
+        return self.__graph
+
+    @property
     def unsorted_graph(self: Graph) -> Dict[Task, Tuple[Task, ...]]:
         """
         The unsorted version of the graph
@@ -222,7 +269,7 @@ class Graph(TopologicalSorter):
             self.__is_async = task.is_async
         task._graph = self if not self._node_to_dependencies else weakref.ref(self)
         self._node_to_dependencies[task] = task.dependencies
-        self.add(task, *task.dependencies)
+        self.__graph_add(task)
         return self
 
     def __iadd__(self: Graph, task: Task) -> Graph:
@@ -299,7 +346,7 @@ class GraphResults(UserDict):
         :return: the result of the task
         """
         if isinstance(key, Task):
-            key = hash(key)
+            key = key.name
         return super().__getitem__(key)
 
 
@@ -424,15 +471,6 @@ class Task:
         return asyncio.iscoroutinefunction(self.func)
 
     @property
-    def id(self: Task) -> str:
-        """
-        The id for the task
-
-        :return: a unique identifier for the task
-        """
-        return str(id(self))
-
-    @property
     def graph(self: Task) -> Optional[Graph]:
         """
         The underlying graph for the task
@@ -445,9 +483,9 @@ class Task:
         """
         Hash function for the task, this lets it be stored in hashable types (sets, as dict keys etc...)
 
-        :return: the hash for the task, if a name is provided this is a hash of the name otherwise its a hash of the id
+        :return: the hash for the task, which is a hash of the name
         """
-        return id(self) if self.name is None else hash(self.name)
+        return hash(self.name)
 
     def __and__(self: Task, other: Task) -> Tuple[Task, ...]:
         """
@@ -495,12 +533,12 @@ def _concurrent_execute_graph(
     :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
     :return: the result of the graph execution
     """
-    graph.prepare()
+    graph.low_level_graph.prepare()
     results: Dict[Task, Union[Any, Tuple[Any, ...]]] = {}
     task_futures: Set[Future[Any]] = set()
     task_future_map: Dict[Future, Task] = {}
-    while graph.is_active():
-        available_tasks = graph.get_ready()
+    while graph.low_level_graph.is_active():
+        available_tasks = graph.low_level_graph.get_ready()
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
         for available_task in eligible_tasks:
             available_task = cast(Task, available_task)
@@ -529,9 +567,9 @@ def _concurrent_execute_graph(
             result = task_future.result()
         task_futures.remove(task_future)
         _execute_post_call(post_call, task, result, results)
-        graph.done(task)
+        graph.low_level_graph.done(task)
         results[task] = result
-    return GraphResults({hash(task): result for task, result in results.items()})
+    return GraphResults({task.name: result for task, result in results.items()})
 
 
 def _sync_execute_graph(
@@ -552,10 +590,10 @@ def _sync_execute_graph(
     :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
     :return: the result of the graph execution
     """
-    graph.prepare()
+    graph.low_level_graph.prepare()
     results: Dict[Task, Union[Any, Tuple[Any, ...]]] = {}
-    while graph.is_active():
-        available_tasks = graph.get_ready()
+    while graph.low_level_graph.is_active():
+        available_tasks = graph.low_level_graph.get_ready()
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
         for available_task in eligible_tasks:
             available_task = cast(Task, available_task)
@@ -571,9 +609,9 @@ def _sync_execute_graph(
                 if raise_immediately:
                     raise result
             _execute_post_call(post_call, available_task, result, results)
-            graph.done(available_task)
+            graph.low_level_graph.done(available_task)
             results[available_task] = result
-    return GraphResults({hash(task): result for task, result in results.items()})
+    return GraphResults({task.name: result for task, result in results.items()})
 
 
 def execute_graph(
@@ -600,6 +638,8 @@ def execute_graph(
     :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
     :return: the result of the graph execution
     """
+    if graph._results:
+        return graph._results
     if isinstance(concurrency_pool, (ThreadPoolExecutor, ProcessPoolExecutor)):
         result = _concurrent_execute_graph(graph, concurrency_pool, pre_call, post_call, raise_immediately)
     elif n_jobs and concurrency_pool in (ThreadPoolExecutor, ProcessPoolExecutor):
@@ -607,7 +647,8 @@ def execute_graph(
             result = _concurrent_execute_graph(graph, pool, pre_call, post_call, raise_immediately)
     else:
         result = _sync_execute_graph(graph, pre_call, post_call, raise_immediately)
-    return result
+    graph._results = result
+    return graph._results
 
 
 async def _aproducer(
@@ -673,11 +714,13 @@ async def aexecute_graph(
     :raises FailedDependencyError: if all available nodes are waiting on a dependency that has failed and raise_immmediately is False
     :return: the result of the graph execution
     """
-    graph.prepare()
+    if graph._results:
+        return graph._results
+    graph.low_level_graph.prepare()
     result_queue = asyncio.Queue()
     results: Dict[Task, Union[Any, Tuple[Any, ...]]] = {}
-    while graph.is_active():
-        available_tasks = graph.get_ready()
+    while graph.low_level_graph.is_active():
+        available_tasks = graph.low_level_graph.get_ready()
         eligible_tasks = _get_eligble_tasks(available_tasks, results) if not raise_immediately else available_tasks
         for available_task in eligible_tasks:
             available_task = cast(Task, available_task)
@@ -701,6 +744,7 @@ async def aexecute_graph(
             )
         task, result = await _aconsumer(result_queue, raise_immediately)
         _execute_post_call(post_call, task, result, results)
-        graph.done(task)
+        graph.low_level_graph.done(task)
         results[task] = result
-    return GraphResults({hash(task): result for task, result in results.items()})
+    graph._results = GraphResults({task.name: result for task, result in results.items()})
+    return graph._results
