@@ -12,7 +12,7 @@ repos:
     rev: v1.1.377
     hooks:
       - id: pyright
-        exclude: ^[tests]*[docs]*/ 
+        exclude: ^[tests]*[docs]*[benchmark]*/ 
 
   - repo: https://github.com/pdm-project/pdm
     rev: 2.18.1 # a PDM release exposing the hook
