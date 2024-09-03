@@ -18,14 +18,32 @@ Syncra is a lightweight and simple tool designed to provide native performance a
 - **High Performance**: Optimized for speed and efficiency.
 - **Easy to Use**: Simple and intuitive API.
 - **Lightweight**: Syncra has no dependencies on anything outside of the standard library.
+  
 
 
 ## Installation
 
 To install Syncra, you can use pip:
 
-```sh
-pip install syncra
-```
+=== "cgraphlib"
+
+  ```sh
+  pip install syncra[cgraphlib]
+  ```
+
+=== "std"
+
+  ```sh
+  pip install syncra
+  ```
+
+!!! note
+
+    syncra is compatible with versions of python 3.8 and greater, however for 3.8 its only available with the cgraphlib optional dependency
+
+!!! tip
+
+    To get the full speed improvement for larger DAGs install syncra with the cgraphlib optional dependency
+
 
 After installation head over to the [quick start](quick_start.md) page to get started with creating and executing graphs.
