@@ -341,8 +341,8 @@ class Task:
 
         if dependencies is None:
             self.dependencies = ()
-        elif isinstance(self.dependencies, Task):
-            self.dependencies = (self.dependencies,)
+        elif isinstance(dependencies, Task):
+            self.dependencies = (dependencies,)
         else:
             self.dependencies = cast(Tuple[Task, ...], dependencies)
 
