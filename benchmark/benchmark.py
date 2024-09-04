@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
@@ -9,16 +8,15 @@ from random import choices, randint, seed
 from time import sleep
 from typing import Any, Callable, List
 from uuid import uuid4
-
+import gc
 from tqdm import tqdm
 
 from syncra import Graph, Task
-
-logging.basicConfig(level=logging.DEBUG)
+from syncra._execution import _get_graph
 
 SLEEP_TIME = 1e-10
 MAX_DEPENDENCIES = 100
-
+NUM_ITERATIONS = 10
 
 def no_op(*args, **kwargs):
     sleep(SLEEP_TIME)
@@ -47,7 +45,7 @@ def create_tasks(task_count: int, task_func: Callable[[], None], graph: Any) -> 
 
 
 def execute_bench(task_count: int, **kwargs) -> float:
-    progress = tqdm(total=task_count, desc=f"Executing {task_count} tasks")
+    progress = tqdm(total=task_count, desc=f"Executing {task_count} tasks", leave=False)
 
     def post_call(result, *args):
         progress.update(n=1)
@@ -60,13 +58,16 @@ def execute_bench(task_count: int, **kwargs) -> float:
 
     end = datetime.now()
     elapsed = (end - start).total_seconds()
-    assert len(results) == task_count, "Not all tasks were completed"
     progress.close()
+    assert len(results) == task_count, "Not all tasks were completed"
+    del _get_graph()[graph.name]
+    del graph
+    gc.collect()
     return elapsed
 
 
 async def aexecute_bench(task_count: int) -> float:
-    progress = tqdm(total=task_count, desc=f"Executing {task_count} async tasks")
+    progress = tqdm(total=task_count, desc=f"Executing {task_count} async tasks", leave=False)
 
     def post_call(result, *args):
         progress.update(n=1)
@@ -82,6 +83,9 @@ async def aexecute_bench(task_count: int) -> float:
 
     progress.close()
     assert len(results) == task_count, "Not all tasks were completed"
+    del _get_graph()[graph.name]
+    del graph
+    gc.collect()
     return elapsed
 
 
@@ -93,7 +97,7 @@ def benchmark():
     process_results = {task_count: [] for task_count in task_counts}
     async_results = {task_count: [] for task_count in task_counts}
 
-    for _ in range(30):  # Many iterations to average out outliers
+    for _ in tqdm(range(NUM_ITERATIONS), desc="Executing benchmark iterations"):  # Many iterations to average out outliers
         for task_count in task_counts:
             sync_results[task_count].append(execute_bench(task_count))
 
