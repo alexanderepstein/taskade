@@ -118,7 +118,6 @@ results = graph()
 
 When a graph is executed, the execution method returns a dictionary where the keys are the task objects and the values are the results of the tasks.
 You can retrieve the result of a task by indexing the dictionary with the task object itself:
-Python
 
 ```python
 results = graph()
@@ -138,7 +137,7 @@ print(result_c)  # Output: "Task C"
 
 This allows you to easily access the results of individual tasks after executing the graph.
 Note that if a task raises an exception during execution, the corresponding value in the results dictionary will be the exception object itself. You can check if a task raised an exception by using the isinstance function:
-Python
+
 
 ```python
 if isinstance(results[task_a], Exception):

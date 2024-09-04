@@ -10,6 +10,7 @@ nav:
   - Home: 
     - Introduction: index.md
     - Quick Start: quick_start.md
+    - CGraphlib: cgraphlib.md
     - Changelog: changelog.md
     - License: license.md
   - Usage:
@@ -23,7 +24,7 @@ nav:
 
 theme:
   name: material
-  logo: assets/logo.png
+  logo: assets/logo_blue.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -90,5 +91,7 @@ markdown_extensions:
   - pymdownx.highlight:
       use_pygments: true
       pygments_lang_class: true
+  - pymdownx.snippets:
+      base_path: docs
 
       
