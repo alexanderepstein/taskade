@@ -7,7 +7,7 @@ To set up the environment for development, install  and run the following comman
 
 
 ```bash
-pdm install -dev
+pdm install -G :all
 ```
 
 This will install all the dependencies required for development.

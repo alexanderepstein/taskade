@@ -1,4 +1,5 @@
 import asyncio
+import gc
 import json
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -8,7 +9,7 @@ from random import choices, randint, seed
 from time import sleep
 from typing import Any, Callable, List
 from uuid import uuid4
-import gc
+
 from tqdm import tqdm
 
 from syncra import Graph, Task
@@ -17,6 +18,7 @@ from syncra._execution import _get_graph
 SLEEP_TIME = 1e-10
 MAX_DEPENDENCIES = 100
 NUM_ITERATIONS = 10
+
 
 def no_op(*args, **kwargs):
     sleep(SLEEP_TIME)
@@ -97,7 +99,9 @@ def benchmark():
     process_results = {task_count: [] for task_count in task_counts}
     async_results = {task_count: [] for task_count in task_counts}
 
-    for _ in tqdm(range(NUM_ITERATIONS), desc="Executing benchmark iterations"):  # Many iterations to average out outliers
+    for _ in tqdm(
+        range(NUM_ITERATIONS), desc="Executing benchmark iterations"
+    ):  # Many iterations to average out outliers
         for task_count in task_counts:
             sync_results[task_count].append(execute_bench(task_count))
 

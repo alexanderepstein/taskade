@@ -1,8 +1,9 @@
 <div align="center">
 
-![logo](docs/assets/logo.png)
+![logo](docs/assets/logo_blue.png)
 
-### Effortless Task Management: Flexible, Fast, and Reliable Execution
+### Effortless Task Management: Flexible, Fast, Simple and Reliable
+
 
 </div>
 
@@ -10,12 +11,15 @@
 
 Syncra is a Python framework designed to simplify the execution of tasks with dependencies. It provides a flexible and efficient way to manage task execution, allowing developers to focus on writing task logic rather than managing dependencies.
 
-### Key Features
 
-* **Task Graphs**: Define tasks and their dependencies using a simple API.
-* **Concurrent Execution**: Execute tasks concurrently using threads or processes.
-* **Async Support**: Supports asynchronous tasks and execution.
-* **Flexible Execution**: Choose from various execution strategies, including sequential, concurrent, and asynchronous execution.
+### Features
+
+- **High Performance**: Optimized for speed and efficiency.
+- **Easy to Use**: Simple and intuitive API.
+- **Lightweight**: Syncra has no dependencies on anything outside of the standard library.
+- **Flexible Execution**: Choose from various execution strategies, including sequential, concurrent, and asynchronous execution.
+- **CGraphLib**: An optional dependency written for Syncra [cgraphlib](https://github.com/alexanderepstein/syncra/blob/mainline/src/cgraphlib/cgraphlib.c). With up to a ~2.5x performance improvement over the standard library.
+
 
 ### Design Principles
 Syncra is designed with the following principles in mind:
@@ -39,9 +43,15 @@ Syncra is suitable for applications that require:
 pip install syncra
 ```
 
-### Sync Tasks
+Or install with [cgraphlib](https://github.com/alexanderepstein/syncra/blob/mainline/src/cgraphlib/cgraphlib.c) for a ~2.5x performance improvement (recommended for larger DAGs). cgraphlib is a C extension that provides a more performant graph traversal algorithm and is also available on versions of python that don't support the [graphlib](https://docs.python.org/3/library/graphlib.html).
 
-To create a Task, the simplest way is through the @task decorator:
+```python
+pip install syncra[cgraphlib]
+```
+
+### Basic Usage
+
+To create a Task, the simplest way is through the `@task` decorator:
 
 ```python
 from syncra import task
@@ -112,4 +122,8 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+### Documentation
+
+The above are just the basics of using Syncra, there is a lot more functionality provdided that can be found in the documentation. 
 

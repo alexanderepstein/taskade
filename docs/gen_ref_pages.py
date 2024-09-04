@@ -9,7 +9,11 @@ nav = mkdocs_gen_files.Nav()
 root = Path(__file__).parent.parent
 src = root / "src"
 
-for path in sorted(src.rglob("*.py")):
+paths = list(src.rglob("*.py"))
+paths.extend(list(src.rglob("*.pyi")))
+for path in sorted(paths):
+    if "cgraphlib" in path.parts and ".pyi" not in path.parts[-1]:
+        continue
     module_path = path.relative_to(src).with_suffix("")
     doc_path = path.relative_to(src).with_suffix(".md")
     full_doc_path = Path("reference", doc_path)
