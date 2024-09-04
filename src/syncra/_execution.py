@@ -5,10 +5,10 @@ import weakref
 from collections import UserDict
 from concurrent import futures
 from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
-from dataclasses import dataclass, field
 from functools import lru_cache, wraps
 from importlib import import_module
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Type, Union, cast
+from uuid import uuid4
 
 from graphlib import TopologicalSorter
 
@@ -303,33 +303,56 @@ class GraphResults(UserDict):
         return super().__getitem__(key)
 
 
-@dataclass
 class Task:
     """The task object, wrapping a function and its dependencies"""
 
-    func: Callable[..., Union[Any, Awaitable[Any]]]
-    """The function that that task is wrapping"""
+    def __init__(
+        self,
+        func: Callable[..., Union[Any, Awaitable[Any]]],
+        dependencies: Optional[Union[Task, Tuple[Task, ...]]] = None,
+        output_names: Optional[Tuple[str, ...]] = None,
+        *,
+        pre_call: Optional[PreCallProtocol] = None,
+        post_call: Optional[PostCallProtocol] = None,
+        init_kwargs: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
+        _graph: Optional[Union[Graph, weakref.ref[Graph]]] = None,
+    ):
+        """
+        Initialize a Task object.
 
-    dependencies: Tuple[Task, ...] = ()
-    """The dependencies of the task"""
+        :param func: The function that the task is wrapping
+        :param dependencies: The dependencies of the task, defaults to None
+        :param output_names: The names of the outputs of the task, defaults to None
+        :param pre_call: The function to call with the results of the dependencies for this task, defaults to None
+        :param post_call: The function to call with the output of this task, defaults to None
+        :param init_kwargs: The optional initialization arguments for the task if not provided all input arguments will
+        be provided by the dependency results, defaults to None
+        :param name: The optional name for this task, defaults to None
+        :param _graph: The optional graph for this task, defaults to None
+        """
+        self.func = func
+        self.output_names: Tuple[str, ...] = output_names if output_names is not None else ()
+        self.pre_call = pre_call
+        self.post_call = post_call
+        self.init_kwargs = init_kwargs
+        self.name = name if name is not None else str(uuid4())
+        self._graph = _graph
 
-    output_names: Tuple[str, ...] = ()
-    """The names of the outputs of the task, this must match the number of outputs from the task"""
+        if dependencies is None:
+            self.dependencies = ()
+        elif isinstance(self.dependencies, Task):
+            self.dependencies = (self.dependencies,)
+        else:
+            self.dependencies = cast(Tuple[Task, ...], dependencies)
 
-    pre_call: Optional[PreCallProtocol] = field(default=None, kw_only=True)
-    """The function to call with the results of the dependencies for this task"""
-
-    post_call: Optional[PostCallProtocol] = field(default=None, kw_only=True)
-    """The function to call with the output of this task"""
-
-    init_kwargs: Optional[Dict[str, Any]] = field(default=None, kw_only=True)
-    """The optional initialization arguments for the task"""
-
-    name: Optional[str] = field(default=None, kw_only=True)
-    """The optional name for this task"""
-
-    _graph: Optional[Union[Graph, weakref.ref[Graph]]] = None
-    """The optional graph where this task is part of the execution"""
+        if len(self.dependencies) > 0:
+            for dependent_task in self.dependencies:
+                self._set_graph(dependent_task)
+        if self._graph is not None:
+            # TODO: There is a special case where the task is already part of the graph,
+            # but we are still adding it to the graph, handle this better to avoid unnecessary checks
+            cast(Graph, self.graph) + self
 
     def __call__(self, *args, **kwargs) -> Union[_T, Awaitable[_T]]:
         """
@@ -338,17 +361,6 @@ class Task:
         :return: the results of the execution, if the function is async this will return the awaitable
         """
         return self.func(*args, **kwargs)
-
-    def __post_init__(self) -> None:
-        """
-        Post initialization for the task, this performs the necessary manipulations on the internal state
-        """
-        if self.name is None:
-            self.name = self.id
-        if isinstance(self.dependencies, Task):
-            self.dependencies = (self.dependencies,)
-        for dependent_task in self.dependencies:
-            self._set_graph(dependent_task)
 
     @classmethod
     def from_dict(
