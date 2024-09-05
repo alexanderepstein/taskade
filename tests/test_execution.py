@@ -49,8 +49,9 @@ def example_post_call(result: _T, *args):
     pass
 
 
-async def test_graph_single_execution():
-    a = Task(partial(sleep, 0.5), post_call=example_post_call)
+def test_graph_single_execution():
+    g = Graph(name="test")
+    a = Task(partial(sync_sleep, 0.5), post_call=example_post_call, _graph=g)
     graph = cast(Graph, a.graph)
     results = graph.execute()
     results = cast(GraphResults, results)
