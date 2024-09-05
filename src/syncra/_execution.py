@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import weakref
 from collections import UserDict
 from concurrent import futures
 from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
@@ -58,6 +57,15 @@ def get_graph(graph_name: str) -> Optional[Graph]:
     :return: The retrieved Graph object or None if not found
     """
     return _get_graph().get(graph_name)
+
+
+def delete_graph(graph_name: str) -> None:
+    """
+    Delete a graph by name from the global graph dictionary.
+
+    :param graph_name: The name of the graph to delete
+    """
+    del _get_graph()[graph_name]
 
 
 def _get_args_from_dependencies(
@@ -200,6 +208,17 @@ class Graph:
         if self.name:
             _get_graph()[self.name] = self
 
+    def __del__(self):
+        """
+        Destructor for the graph, removes the graph from the global graph dictionary
+        """
+        try:
+            delete_graph(self.name)
+        except KeyError:
+            pass
+        for task in self._node_to_dependencies:
+            task._graph = None  # Remove the reference to the graph
+
     def __c_graph_add(self: Graph, task: Task) -> None:
         """
         Adds a task to the graph when using cgraphlib
@@ -279,28 +298,34 @@ class Graph:
         """
         return self.__is_async
 
-    def __add__(self: Graph, task: Task) -> Graph:
+    def __add__(self: Graph, tasks: Union[Task, Tuple[Task, ...]]) -> Graph:
         """
-        Adds a task to the graph
+        Addition operator
 
         :param task: the task to add to the graph
         :return: the graph itself
         """
-        if not self.__is_async:
-            self.__is_async = task.is_async
-        task._graph = self if not self._node_to_dependencies else weakref.ref(self)
-        self._node_to_dependencies[task] = task.dependencies
-        self.__graph_add(task)
+        if isinstance(tasks, Task):
+            tasks = (tasks,)
+        for task in tasks:
+            if not self.__is_async:
+                self.__is_async = task.is_async
+            if task._graph is not None:
+                if task.graph != self:
+                    raise ValueError(f"Task {task.name} is already part of a different graph.")
+            task._graph = self
+            self._node_to_dependencies[task] = task.dependencies
+            self.__graph_add(task)
         return self
 
-    def __iadd__(self: Graph, task: Task) -> Graph:
+    def __iadd__(self: Graph, tasks: Union[Task, Tuple[Task, ...]]) -> Graph:
         """
         In place addition operator for adding a task to the graph
 
-        :param task: the task to add to the graph
+        :param tasks: the task or tuple of tasks to add to the graph
         :return: the graph itself
         """
-        return self + task
+        return self + tasks
 
     def execute(
         self: Graph,
@@ -384,7 +409,7 @@ class Task:
         post_call: Optional[PostCallProtocol] = None,
         init_kwargs: Optional[Dict[str, Any]] = None,
         name: Optional[str] = None,
-        _graph: Optional[Union[Graph, weakref.ref[Graph]]] = None,
+        _graph: Optional[Graph] = None,
     ):
         """
         Initialize a Task object.
@@ -417,9 +442,7 @@ class Task:
         if len(self.dependencies) > 0:
             for dependent_task in self.dependencies:
                 self._set_graph(dependent_task)
-        if self._graph is not None:
-            # TODO: There is a special case where the task is already part of the graph,
-            # but we are still adding it to the graph, handle this better to avoid unnecessary checks
+        elif self._graph is not None:  # For task graphs where no dependencies are provided
             cast(Graph, self.graph) + self
 
     def __call__(self, *args, **kwargs) -> Union[_T, Awaitable[_T]]:
@@ -461,9 +484,7 @@ class Task:
 
     def _set_graph(self: Task, other: Task) -> None:
         """
-        Ensures that this task and an other task are tied to the same graph, whichever task is tied to an existing graph then the other will
-        be provided a weak reference to the graph through the task tied to it. If neither task are tied to a graph then a graph will be created
-        and this task will contain a strong reference while the other will contain the weak reference
+        Ensures that this task and another task are tied to the same graph,
 
         :param other: the other task tied to this task
         :raises ValueError: if both tasks have a graph and they are not the same graph
@@ -471,11 +492,11 @@ class Task:
         if self._graph is None:
             graph = other.graph
             if graph is not None:
-                self._graph = weakref.ref(graph)
+                self._graph = graph
                 graph + self
             else:
                 self._graph = Graph((self, other))
-                other._graph = weakref.ref(self._graph)
+                other._graph = self._graph
         else:
             if other.graph is not None and self.graph != other.graph:
                 raise ValueError(f"Task {self.name} and Task {other.name} are in different graphs.")
@@ -498,7 +519,7 @@ class Task:
 
         :return: the graph for the task, this will be None if this task is not part of a graph
         """
-        return self._graph if self._graph is None or isinstance(self._graph, Graph) else self._graph()
+        return self._graph
 
     def __hash__(self: Task) -> int:
         """
@@ -508,31 +529,25 @@ class Task:
         """
         return hash(self.name)
 
-    def __and__(self: Task, other: Task) -> Tuple[Task, ...]:
+    def __and__(self: Task, other: Union[Task, Tuple[Task, ...]]) -> Tuple[Task, ...]:
         """
-        Binary and operator for the task
+        Binary and operator for the task or a tuple of tasks
         This allows for the syntax task_a & task_b when defining dependencies for another graph
-        Implicitly these tasks will be made part of the same graph
 
         :param other: the task being `anded` with this task
-        :raises ValueError: if both tasks have an assigned graph and they are not the same graph
         :return: a tuple of this task and the one being added
         """
-        self._set_graph(other)
-        return (self, other)
+        return (self, other) if isinstance(other, Task) else (self, *other)
 
     def __rand__(self: Task, other: Task) -> Tuple[Task, ...]:
         """
-        Binary and operator for the task
+        Binary rand operator for the task or a tuple of tasks
         This allows for the syntax task_a & task_b when defining dependencies for another graph
-        Implicitly these tasks will be made part of the same graph
 
         :param other: the task being `anded` with this task
-        :raises ValueError: if both tasks have an assigned graph and they are not the same graph
         :return: a tuple of this task and the one being added
         """
-        self._set_graph(other)
-        return (other, self)
+        return (other, self) if isinstance(other, Task) else (*other, self)
 
 
 def _concurrent_execute_graph(

@@ -73,6 +73,22 @@ async def test_graph_aexecution():
     assert results[d] == "seconds=0.5"
 
 
+@pytest.mark.asyncio
+async def test_graph_aexecution_added():
+    graph = Graph()
+    a = Task(partial(asleep, 1))
+    b = Task(partial(asleep, 0.5))
+    graph += a & b  # Need to add these task to the graph and c & d will be implicitly added through the dependencies
+    c = Task(partial(asleep, 1), a & b)
+    d = Task(partial(asleep, 0.5), b)
+    results = await graph.execute()
+    results = cast(GraphResults, results)
+    assert results[a] == "seconds=1"
+    assert results[b] == "seconds=0.5"
+    assert results[c] == "seconds=1"
+    assert results[d] == "seconds=0.5"
+
+
 def test_graph_sync_execution():
     a = Task(partial(sync_sleep, 1))
     b = Task(partial(sync_sleep, 0.5))
