@@ -42,12 +42,9 @@ Syncra is suitable for applications that require:
 ```python
 pip install syncra
 ```
+### cgraphlib
 
-Or install with [cgraphlib](https://github.com/alexanderepstein/syncra/blob/mainline/src/cgraphlib/cgraphlib.c) for a ~2.5x performance improvement (recommended for larger DAGs). cgraphlib is a C extension that provides a more performant graph traversal algorithm and is also available on versions of python that don't support the [graphlib](https://docs.python.org/3/library/graphlib.html).
-
-```python
-pip install syncra[cgraphlib]
-```
+ [cgraphlib](https://github.com/alexanderepstein/syncra/blob/mainline/src/cgraphlib/cgraphlib.c) is a C extension that provides a more performant graph traversal algorithm and is also available on versions of python that don't support the [graphlib](https://docs.python.org/3/library/graphlib.html) providing a ~2.5x performance improvement 
 
 ### Basic Usage
 
