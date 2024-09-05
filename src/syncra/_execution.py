@@ -19,24 +19,22 @@ log = getLogger(__name__)
 """The logger for the module"""
 
 # Handle import of cgraphlib if available
-try:
-    if os.environ.get("USE_PYGRAPHLIB", "").lower() == "true":
-        raise ImportError("Using Python graphlib")
-    from syncra.cgraphlib import TopologicalSorter
-
-    __cgraphlib__ = True
-    log.debug("Using C extension")
-except ImportError:
+if os.environ.get("USE_PYGRAPHLIB", "").lower() == "true":
     from sys import version_info
 
     if version_info < (3, 9):
         raise ImportError(
-            "graphlib is only supported on Python 3.9 or greater. To use syncra on Python 3.8 or lower, please install with the cgraphlib enabled."
+            "graphlib is only supported on Python 3.9 or greater. To use syncra on Python 3.8 or lower, please run with pygraphlib disabled."
         )
+    log.debug("Using Python graphlib")
     from graphlib import TopologicalSorter
 
     __cgraphlib__ = False
-    log.debug("Using Python graphlib")
+else:
+    log.debug("Using C extension")
+    from syncra.cgraphlib import TopologicalSorter
+
+    __cgraphlib__ = True
 
 
 @lru_cache(maxsize=1)
