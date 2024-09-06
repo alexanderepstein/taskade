@@ -6,9 +6,9 @@ from typing import TypeVar, cast
 
 import pytest
 
-from syncra import Task
-from syncra._exceptions import FailedDependencyError
-from syncra._execution import Graph, GraphResults
+from taskade import Task
+from taskade._exceptions import FailedDependencyError
+from taskade._execution import Graph, GraphResults
 
 _T = TypeVar("_T")
 

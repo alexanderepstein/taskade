@@ -1,5 +1,5 @@
 [project]
-name = "syncra"
+name = "taskade"
 dynamic = ["version"]
 description = "A DAG framework written in std python"
 authors = [
@@ -32,7 +32,7 @@ build-backend = "pdm.backend"
 
 [tool.pdm.version]
 source = "file"
-path = "src/syncra/__init__.py"
+path = "src/taskade/__init__.py"
 
 [tool.ruff]
 
@@ -143,7 +143,7 @@ pre-commit = "pre-commit run --all-files"
 serve-document = "mkdocs serve"
 document = "mkdocs build -d public/documentation"
 deploy-document = "mkdocs gh-deploy -d public/documentation"
-test = "pytest -n auto --cov-report term --cov-report xml:coverage.xml  --cov-report html:docs/development/coverage --cov=syncra"
+test = "pytest -n auto --cov-report term --cov-report xml:coverage.xml  --cov-report html:docs/development/coverage --cov=taskade"
 format = {composite = ["ruff check . --fix", "ruff format"]}
 release = {composite = ["pre-commit", "test", "document"]}
 benchmark = "bash benchmark/benchmark.sh"

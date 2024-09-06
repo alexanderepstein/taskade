@@ -5,7 +5,7 @@
 You can use multiple task decorators on a single function to create multiple tasks with different dependencies and settings:
 
 ```python
-from syncra import task
+from taskade import task
 
 @task(graph_name="graph1", dependencies=("task_b",), name="task_a_1", output_names=("result_a",))
 @task(graph_name="graph1", dependencies=("task_c",), name="task_a_2", output_names=("result_b",))
@@ -39,7 +39,7 @@ Note that the number of arguments in task_e matches the number of outputs from t
 You can pass initialization keyword arguments to tasks using the `init_kwargs` parameter:
 
 ```python
-from syncra import task
+from taskade import task
 
 @task(graph_name="graph", init_kwargs={"foo": "bar"})
 def task_a(foo):
@@ -56,7 +56,7 @@ This passes the foo keyword argument to `task_a` when it's executed.
 You can specify output names for tasks using the `output_names` parameter:
 
 ```python
-from syncra import task
+from taskade import task
 
 @task(graph_name="graph", output_names=["result_a", "result_b"])
 def task_a():
@@ -77,7 +77,7 @@ This sets the output names of `task_a` to `result_a` and `result_b`, and passes 
 You can create a graph from a dictionary of tasks:
 
 ```python
-from syncra import Graph, task
+from taskade import Graph, task
 
 tasks = {
     "task_a": task_a,
@@ -100,7 +100,7 @@ This creates a graph with the tasks in the dictionary and executes it.
 You can control the concurrency of async execution by passing an async semaphore to the graph's `__call__` method:
 
 ```python
-from syncra import task, get_graph
+from taskade import task, get_graph
 
 @task(graph_name="my_graph", output_names=["result_a"])
 async def task_a():
@@ -122,7 +122,7 @@ async def main():
 You can control the concurrency of sync execution by passing a pool to the graph's `__call__` method:
 
 ```python
-from syncra import task, get_graph
+from taskade import task, get_graph
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 @task(graph_name="my_graph", output_names=("result_a",))
@@ -146,11 +146,11 @@ with ProcessPoolExecutor(max_workers=5) as pool:
     print(results)
 ```
 
-Or you can let syncra manage the pool for you by just passing in the `n_jobs` parameter. When executing a sync graph concurrently this way you can also pass in the type of pool into the `concurency_pool` parameter. By default it is set to [ThreadPoolExecutor][concurrent.futures.ThreadPoolExecutor].
+Or you can let taskade manage the pool for you by just passing in the `n_jobs` parameter. When executing a sync graph concurrently this way you can also pass in the type of pool into the `concurency_pool` parameter. By default it is set to [ThreadPoolExecutor][concurrent.futures.ThreadPoolExecutor].
 
 
 ```python
-from syncra import task, get_graph
+from taskade import task, get_graph
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 @task(graph_name="my_graph", output_names=("result_a",))
@@ -172,4 +172,4 @@ results = graph(n_jobs=5, concurrency_pool=ProcessPoolExecutor)
 print(results)
 ```
 
-In both examples, the `graph_name` parameter is used to set the name of the graph, and the [get_graph][syncra.get_graph] function is used to retrieve the graph. The graph is then called with the concurrency control parameters.
+In both examples, the `graph_name` parameter is used to set the name of the graph, and the [get_graph][taskade.get_graph] function is used to retrieve the graph. The graph is then called with the concurrency control parameters.
