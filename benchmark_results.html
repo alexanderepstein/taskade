@@ -1,0 +1,298 @@
+
+<table style="border-collapse: collapse; width: 100%;">
+  <tr>
+    <th style="border: 1px solid black; padding: 8px;">Execution Type</th>
+    <th style="border: 1px solid black; padding: 8px;">Task Count</th>
+    <th style="border: 1px solid black; padding: 8px;">cgraphlib Avg ± Std (s)</th>
+    <th style="border: 1px solid black; padding: 8px;">pygraphlib Avg ± Std (s)</th>
+    <th style="border: 1px solid black; padding: 8px;">cgraphlib x faster</th>
+  </tr>
+
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">1</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.000112 ± 0.000008</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.000123 ± 0.000004</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.3520179372197308);">1.10</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">10</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.000743 ± 0.000012</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.000798 ± 0.000024</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.3372963511512051);">1.07</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">100</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.017548 ± 0.000144</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.029783 ± 0.000235</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.6486015819106015);">1.70</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">500</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.238663 ± 0.001475</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.555585 ± 0.003965</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.33</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">1000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.570467 ± 0.010899</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">1.391227 ± 0.020914</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.44</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">5000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">3.860468 ± 0.060122</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">9.574127 ± 0.053635</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.48</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">10000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">8.330627 ± 0.055351</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">20.504808 ± 0.248797</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.46</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">50000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">53.619465 ± 0.318738</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">123.350060 ± 0.548668</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.30</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Sync</td>
+            <td style="border: 1px solid black; padding: 8px;">100000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">141.262903 ± 0.509695</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">290.261497 ± 0.827542</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.05</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">1</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.000308 ± 0.000068</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.000369 ± 0.000095</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.39957764782326183);">1.20</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">10</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.001401 ± 0.000135</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.001436 ± 0.000094</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.3126731400828215);">1.03</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">100</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.019505 ± 0.000144</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.031843 ± 0.000247</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.6162778774673159);">1.63</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">500</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.242867 ± 0.001770</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.566135 ± 0.002655</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.33</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">1000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.571698 ± 0.005058</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">1.421466 ± 0.004682</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.49</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">5000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">3.887257 ± 0.051935</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">9.790658 ± 0.119144</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.52</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">10000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">8.609358 ± 0.085867</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">21.039031 ± 0.219296</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.44</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">50000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">58.770154 ± 0.301631</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">131.879641 ± 0.322479</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.24</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Threaded</td>
+            <td style="border: 1px solid black; padding: 8px;">100000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">155.800541 ± 0.653699</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">311.092993 ± 0.508799</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.7983694238263268);">2.00</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">1</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">1.977064 ± 0.679840</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">2.682294 ± 0.927356</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4783527240392826);">1.36</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">10</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">1.975413 ± 0.677598</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">2.676924 ± 0.924303</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.47756053151616745);">1.36</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">100</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">2.015815 ± 0.678133</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">2.728529 ± 0.923138</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.476780708068058);">1.35</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">500</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">2.289209 ± 0.676583</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">3.311899 ± 0.922781</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.5233718600342676);">1.45</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">1000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">2.675230 ± 0.669569</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">4.204118 ± 0.919089</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.5857488915531668);">1.57</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">5000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">6.487916 ± 0.661428</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">13.031447 ± 0.924691</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.01</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">10000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">11.832457 ± 0.659005</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">25.058576 ± 0.857200</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.12</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">50000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">70.737856 ± 1.080970</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">146.915526 ± 0.944690</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.08</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Process</td>
+            <td style="border: 1px solid black; padding: 8px;">100000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">190.708719 ± 1.356575</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">353.259943 ± 0.801520</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.7261766965011303);">1.85</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">1</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.000131 ± 0.000015</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.000145 ± 0.000013</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.3505703422053233);">1.10</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">10</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.000490 ± 0.000015</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.000554 ± 0.000008</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.36578140960163436);">1.13</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">100</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.012828 ± 0.000110</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.024954 ± 0.000117</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.7726529307670118);">1.95</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">500</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.205863 ± 0.001378</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">0.520926 ± 0.003159</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.53</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">1000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">0.500223 ± 0.003213</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">1.321445 ± 0.010514</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.64</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">5000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">3.429843 ± 0.035481</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">9.155247 ± 0.077005</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.67</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">10000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">7.529800 ± 0.069054</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">19.617411 ± 0.184248</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.61</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">50000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">49.364607 ± 0.270251</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">120.704542 ± 0.377445</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.45</td>
+        </tr>
+        
+        <tr>
+            <td style="border: 1px solid black; padding: 8px;">Async</td>
+            <td style="border: 1px solid black; padding: 8px;">100000</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.4);">133.263472 ± 0.751990</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(255, 255, 224, 0.4);">291.191692 ± 2.279661</td>
+            <td style="border: 1px solid black; padding: 8px; background-color: rgba(144, 238, 144, 0.8);">2.19</td>
+        </tr>
+        </table>
