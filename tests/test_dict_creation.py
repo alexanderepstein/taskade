@@ -1,4 +1,4 @@
-from syncra._execution import Graph
+from taskade._execution import Graph
 
 
 def task_a():

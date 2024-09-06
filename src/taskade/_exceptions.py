@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from syncra._types import _T
+from taskade._types import _T
 
 
-class SyncraError(Exception):
-    """Base class for Syncra exceptions."""
+class TaskadeError(Exception):
+    """Base class for Taskade exceptions."""
 
     pass
 
 
-class FailedDependencyError(SyncraError):
+class FailedDependencyError(TaskadeError):
     """Error for when all available tasks have at least one failed dependency."""
 
     def __init__(self: FailedDependencyError, message: str, partial_results: Dict[Any, _T]):

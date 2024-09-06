@@ -2,34 +2,35 @@
 
 ![logo](docs/assets/logo_blue.png)
 
-### Effortless Task Management: Flexible, Fast, Simple and Reliable
-
+<h3>
+Effortless Task Management: Flexible, Fast, Simple and Reliable
+</h3>
 
 </div>
 
 ## Overview
 
-Syncra is a Python framework designed to simplify the execution of tasks with dependencies. It provides a flexible and efficient way to manage task execution, allowing developers to focus on writing task logic rather than managing dependencies.
+Taskade is a Python framework designed to simplify the execution of tasks with dependencies. It provides a flexible and efficient way to manage task execution, allowing developers to focus on writing task logic rather than managing dependencies.
 
 
 ### Features
 
 - **High Performance**: Optimized for speed and efficiency.
 - **Easy to Use**: Simple and intuitive API.
-- **Lightweight**: Syncra has no dependencies on anything outside of the standard library.
+- **Lightweight**: Taskade has no dependencies on anything outside of the standard library.
 - **Flexible Execution**: Choose from various execution strategies, including sequential, concurrent, and asynchronous execution.
-- **CGraphLib**: An optional dependency written for Syncra [cgraphlib](https://github.com/alexanderepstein/syncra/blob/mainline/src/cgraphlib/cgraphlib.c). With up to a ~2.5x performance improvement over the standard library.
+- **CGraphLib**: An optional dependency written for Taskade [cgraphlib](https://github.com/alexanderepstein/taskade/blob/mainline/src/cgraphlib/cgraphlib.c). With up to a ~2.5x performance improvement over the standard library.
 
 
 ### Design Principles
-Syncra is designed with the following principles in mind:
+Taskade is designed with the following principles in mind:
 
 * **Separation of Concerns**: Task logic is separate from execution logic.
 * **Flexibility**: Support for various execution strategies and task types.
 * **Efficiency**: Optimize task execution for performance.
 
 ### Use Cases
-Syncra is suitable for applications that require:
+Taskade is suitable for applications that require:
 
 * **Complex Task Dependencies**: Manage complex task dependencies with ease.
 * **High-Performance Execution**: Execute tasks concurrently for improved performance.
@@ -37,21 +38,21 @@ Syncra is suitable for applications that require:
 
 ## Getting Started
 
-### Install Syncra
+### Install Taskade
 
 ```python
-pip install syncra
+pip install taskade
 ```
 ### cgraphlib
 
- [cgraphlib](https://github.com/alexanderepstein/syncra/blob/mainline/src/cgraphlib/cgraphlib.c) is a C extension that provides a more performant graph traversal algorithm and is also available on versions of python that don't support the [graphlib](https://docs.python.org/3/library/graphlib.html) providing a ~2.5x performance improvement 
+ [cgraphlib](https://github.com/alexanderepstein/taskade/blob/mainline/src/cgraphlib/cgraphlib.c) is a C extension that provides a more performant graph traversal algorithm and is also available on versions of python that don't support the [graphlib](https://docs.python.org/3/library/graphlib.html) providing a ~2.5x performance improvement 
 
 ### Basic Usage
 
 To create a Task, the simplest way is through the `@task` decorator:
 
 ```python
-from syncra import task
+from taskade import task
 
 @task(graph_name='my_graph')
 def my_task():
@@ -77,7 +78,7 @@ def my_final_task(dependent_result)
 Using the decorator automatically creates a Graph and allows it to be executed.
 
 ```python
-from syncra import get_graph
+from taskade import get_graph
 
 def main():
     results = get_graph("my_graph")() # Call the execution of the graph
@@ -90,10 +91,10 @@ if __name__ == "__main__":
 
 ### Combine Sync & Async Tasks
 
-Syncra graphs also allow for mixing async and sync tasks within the same graph. Blocking will occur only when an sync function is executing, but otherwise the same async behavior will be preserved. 
+Taskade graphs also allow for mixing async and sync tasks within the same graph. Blocking will occur only when an sync function is executing, but otherwise the same async behavior will be preserved. 
 
 ```python
-from syncra import task
+from taskade import task
 
 @task(graph_name='my_graph')
 async def my_task():
@@ -108,7 +109,7 @@ def my_final_task(dependent_result)
 you will still need to execute the graph using `await` as some of the nodes are async.
 
 ```python
-from syncra import get_graph
+from taskade import get_graph
 import asyncio
 
 async def main():
@@ -122,5 +123,5 @@ if __name__ == "__main__":
 
 ### Documentation
 
-The above are just the basics of using Syncra, there is a lot more functionality provdided that can be found in the documentation. 
+The above are just the basics of using Taskade, there is a lot more functionality provdided that can be found in the documentation. 
 

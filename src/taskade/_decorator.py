@@ -1,7 +1,7 @@
 from typing import Awaitable, Callable, Dict, Optional, Tuple, Union, cast
 
-from syncra._execution import Graph, PostCallProtocol, PreCallProtocol, Task, _get_graph
-from syncra._types import _T
+from taskade._execution import Graph, PostCallProtocol, PreCallProtocol, Task, _get_graph
+from taskade._types import _T
 
 
 def __map_dependencies(

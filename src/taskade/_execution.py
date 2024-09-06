@@ -11,8 +11,8 @@ from logging import getLogger
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple, Type, Union, cast
 from uuid import uuid4
 
-from syncra._exceptions import FailedDependencyError
-from syncra._types import _T, PoolExecutor
+from taskade._exceptions import FailedDependencyError
+from taskade._types import _T, PoolExecutor
 
 log = getLogger(__name__)
 """The logger for the module"""
@@ -23,7 +23,7 @@ if os.environ.get("USE_PYGRAPHLIB", "").lower() == "true":
 
     if version_info < (3, 9):
         raise ImportError(
-            "graphlib is only supported on Python 3.9 or greater. To use syncra on Python 3.8 or lower, please run with pygraphlib disabled."
+            "graphlib is only supported on Python 3.9 or greater. To use taskade on Python 3.8 or lower, please run with pygraphlib disabled."
         )
     log.debug("Using Python graphlib")
     from graphlib import TopologicalSorter
@@ -31,7 +31,7 @@ if os.environ.get("USE_PYGRAPHLIB", "").lower() == "true":
     __cgraphlib__ = False
 else:
     log.debug("Using C extension")
-    from syncra.cgraphlib import TopologicalSorter
+    from taskade.cgraphlib import TopologicalSorter
 
     __cgraphlib__ = True
 

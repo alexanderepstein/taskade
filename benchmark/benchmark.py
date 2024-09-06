@@ -12,8 +12,8 @@ from uuid import uuid4
 
 from tqdm import tqdm
 
-from syncra import Graph, Task
-from syncra._execution import _get_graph
+from taskade import Graph, Task
+from taskade._execution import _get_graph
 
 SLEEP_TIME = 1e-10
 MAX_DEPENDENCIES = 100

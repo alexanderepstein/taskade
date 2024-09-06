@@ -1,10 +1,10 @@
-site_name: Syncra
+site_name: taskade
 site_url: 
 site_dir: docs
 site_description: A simple and beautiful theme for MkDocs.
 site_author: Alexander Epstein
-repo_name: syncra
-repo_url: https://github.com/alexanderepstein/syncra
+repo_name: taskade
+repo_url: https://github.com/alexanderepstein/taskade
 
 nav: 
   - Home: 

@@ -3,10 +3,10 @@
 
 ## Task Creation
 
-You can create tasks by initializing a [Task][syncra.Task]:
+You can create tasks by initializing a [Task][taskade.Task]:
 
 ```python
-from syncra import Task
+from taskade import Task
 
 def task_a_func():
     return "Task A"
@@ -58,16 +58,16 @@ Tasks can be sync, async or a mixture of the two.
     Note that we don't need to set the graph_name argument when creating the tasks, because a graph is implicitly created once task_b is created due to its dependency on task_a.
 
 !!! note Task Creation Without Graph Name
-    When tasks are created without a `graph_name` the graph cannot be retrieved with the [get_graph][syncra.get_graph] method.
+    When tasks are created without a `graph_name` the graph cannot be retrieved with the [get_graph][taskade.get_graph] method.
 
 
 
 ## Task Decorators
 
-You can create tasks using the [@task][syncra.task] decorator:
+You can create tasks using the [@task][taskade.task] decorator:
 
 ```python
-from syncra import task
+from taskade import task
 
 @task(graph_name="my_graph")
 def task_a():
@@ -84,10 +84,10 @@ def task_c():
 
 ## Explict Graph Creation
 
-Creating a [Graph][syncra.Graph] object and adding tasks to it:
+Creating a [Graph][taskade.Graph] object and adding tasks to it:
 
 ```python
-from syncra import Graph
+from taskade import Graph
 
 graph = Graph(name="my_graph")
 graph += task_a
@@ -168,16 +168,16 @@ Pre and Post Call functions can be set either at the task level, graph execution
 The task level Pre and Post call functions will always take precendence over the graph level version.
 
 
-## Calling Tasks Outside of Syncra
+## Calling Tasks Outside of Taskade
 
-Even though a function is decorated with [@task][syncra.task], it can still be called outside of the Syncra framework just like a normal function:
+Even though a function is decorated with [@task][taskade.task], it can still be called outside of the Taskade framework just like a normal function:
 
 ```python
 result = task_a()
 print(result)  # Output: "Task A"
 ```
 
-This allows you to test or use your tasks independently of the Syncra framework.
+This allows you to test or use your tasks independently of the Taskade framework.
 
 
 To see even more advanced functionality check out the [advanced usage](advanced_usage.md)
